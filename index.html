@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>待購清單</title>
+    <!-- 引入 html2canvas 與 html2pdf 支援 JPG 及 PDF 匯出 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --primary-color: #4a90e2;
@@ -103,9 +105,10 @@
         .product-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 5px; pointer-events: none; }
         .product-price { font-size: 14px; font-weight: bold; color: var(--warning-color); margin-bottom: 5px; pointer-events: none; }
         
-        .action-btns { position: absolute; top: 10px; right: 10px; display: none; gap: 5px; z-index: 10; }
+        .action-btns { position: absolute; top: 10px; right: 10px; display: none; gap: 4px; z-index: 10; }
         .product-card:hover .action-btns { display: flex; }
-        .card-btn { width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+        .card-btn { width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+        .btn-add-freq { background: rgba(255, 71, 87, 0.1); color: var(--freq-color); }
         .btn-del-prod { background: rgba(255, 71, 87, 0.1); color: #ff4757; }
         .btn-edit-prod { background: rgba(74, 144, 226, 0.1); color: #4a90e2; }
         
@@ -144,13 +147,22 @@
         #export-area.hide-prices .price-col { display: none; }
         #export-area.hide-prices .export-total-line { display: none; }
         
+        /* 匯出時隱藏輸入框，改為純數字文字顯示 */
         .print-qty { display: none; }
         .exporting .qty-input { display: none !important; }
         .exporting .print-qty { display: inline !important; }
 
         .preview-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-        .preview-item { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #eee; border-radius: 5px; }
+        .preview-item { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid #eee; border-radius: 5px; background: #fff; }
         .preview-item img { width: 40px; height: 40px; object-fit: contain; background: white; }
+
+        /* Toast 提示框樣式 */
+        #toastNotification {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85); color: white; padding: 12px 24px;
+            border-radius: 25px; font-size: 14px; z-index: 9999; display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: opacity 0.3s ease;
+        }
 
         /* =========================================
            📱 全方位適應手機介面
@@ -239,7 +251,7 @@
     <div class="freq-bar" id="freqBar">
         <span class="freq-bar-title">⭐ 常買清單：</span>
         <div id="freqListContainer" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
-        <span style="font-size:12px; color:#999;">(可於檢視清單中將當前商品設為常買)</span>
+        <span style="font-size:12px; color:#999;">(點擊常買清單可直接編輯或匯入)</span>
     </div>
 </header>
 
@@ -257,7 +269,7 @@
         <div class="content-header">
             <div class="filters">
                 <select id="brandFilter"><option value="">所有品牌</option></select>
-                <select id="capacityFilter"><option value="">所有容量</option></select>
+                <select id="capacityFilter"><option value="">所有容量/規格</option></select>
                 <div class="price-filter">
                     💲 <input type="number" id="minPriceF" placeholder="最低價" min="0"> ~ 
                     <input type="number" id="maxPriceF" placeholder="最高價" min="0">
@@ -304,7 +316,6 @@
             <label>容量/規格 (選填)</label>
             <input type="text" id="prodCapacity" placeholder="例如: 3顆裝">
         </div>
-        <!-- 自定義標題與內容 (選填) -->
         <div class="form-group" style="display: flex; gap: 10px;">
             <div style="flex: 1;">
                 <label>自定義標題 (選填)</label>
@@ -332,16 +343,18 @@
         <p style="margin-bottom: 10px; color: #777; font-size: 13px;">確認無誤後點擊匯出。表格可左右滑動查看。</p>
         
         <div style="display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-            <div style="display:flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <button class="btn-action" style="background: var(--edit-color);" onclick="saveAsFrequentList()">⭐ 設為常買</button>
+                <button class="btn-action" style="background: #e84118;" onclick="clearCart()">🗑️ 清空全部</button>
                 <label style="cursor: pointer; font-weight: bold; font-size: 13px; background:#e6f7ff; padding:8px 10px; border-radius:5px; border:1px solid #91d5ff;">
                     <input type="checkbox" id="showPriceToggle" checked onchange="togglePriceExport()"> 匯出顯示金額
                 </label>
             </div>
             
-            <div style="display:flex; align-items: center; gap: 15px;">
+            <div style="display:flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <div style="font-weight:bold; font-size:16px;">總金額：<span id="cartTotalDisplay">$0</span></div>
                 <button class="btn-action" style="background: #ff4757;" onclick="exportToImage()">匯出 JPG</button>
+                <button class="btn-action" style="background: #8e44ad;" onclick="exportToPDF()">匯出 PDF</button>
             </div>
         </div>
 
@@ -371,18 +384,26 @@
     </div>
 </div>
 
-<!-- 常買清單預覽彈窗 -->
+<!-- 常買清單編輯與預覽彈窗 -->
 <div class="modal-overlay" id="freqPreviewModal">
-    <div class="modal-content small">
+    <div class="modal-content small" style="width: 480px;">
         <span class="modal-close" onclick="closeModal('freqPreviewModal')">&times;</span>
-        <h2 style="margin-bottom: 20px;" id="freqPreviewTitle">常買清單</h2>
-        <div class="preview-list" id="freqPreviewList"></div>
-        <div style="display:flex; gap:10px; margin-top: 20px;">
-            <button class="btn-submit" onclick="importFrequentList()">✅ 確定匯入</button>
-            <button class="btn-submit" style="background:#ff4757;" onclick="deleteFrequentList()">🗑️ 刪除此設定</button>
+        <h2 style="margin-bottom: 15px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;" id="freqPreviewTitle">常買清單</h2>
+        
+        <p style="font-size:13px; color:#666; margin-bottom:10px;">您可以修改清單名稱、調整數量或刪除項目：</p>
+        
+        <!-- 清單內容列表 -->
+        <div id="freqPreviewList"></div>
+
+        <div style="display:flex; gap:10px; margin-top: 20px; flex-wrap:wrap;">
+            <button class="btn-submit" style="flex: 1; margin-top:0;" onclick="importFrequentList()">✅ 一鍵匯入至待購清單</button>
+            <button class="btn-submit" style="background:#ff4757; width:auto; margin-top:0;" onclick="deleteFrequentList()">🗑️ 刪除此常買設定</button>
         </div>
     </div>
 </div>
+
+<!-- 提示框 Toast -->
+<div id="toastNotification"></div>
 
 <script>
     const fallbackImage = `data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='16' fill='%23999'%3E無圖片%3C/text%3E%3C/svg%3E`;
@@ -416,7 +437,6 @@
         document.getElementById('minPriceF').addEventListener('input', updateProductView);
         document.getElementById('maxPriceF').addEventListener('input', updateProductView);
         
-        // 圖片上傳處理：強制填滿白底，解決透明 PNG 變黑底的問題
         document.getElementById('prodImage').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -452,9 +472,18 @@
         localStorage.setItem('daigou_budget', document.getElementById('budgetInput').value);
     }
 
+    function triggerUpdate() {
+        saveData();
+        checkBudget();
+        renderCategories();
+        renderFrequentLists();
+        updateProductView();
+        updateCartDisplay();
+    }
+
     function checkBudget() {
         const budgetInput = document.getElementById('budgetInput').value;
-        saveData();
+        localStorage.setItem('daigou_budget', budgetInput);
 
         let total = 0;
         products.forEach(p => {
@@ -474,14 +503,28 @@
         }
     }
 
+    function showToast(message) {
+        const toast = document.getElementById('toastNotification');
+        toast.innerText = message;
+        toast.style.display = 'block';
+        toast.style.opacity = '1';
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => { toast.style.display = 'none'; }, 300);
+        }, 2500);
+    }
+
     function addCategory() {
         const input = document.getElementById('newCategoryInput');
         const newCat = input.value.trim();
         if (!newCat) return;
         if (newCat === '所有' || newCat === '未分類') { alert('「所有」與「未分類」為系統內建保留字。'); return; }
+        if (customCategories.length >= 20) { alert('商品分類最多只能新增 20 個！'); return; }
         if (customCategories.includes(newCat)) { alert('此分類已存在！'); return; }
         customCategories.push(newCat);
-        saveData(); input.value = ''; renderCategories(); changeCategory(newCat);
+        input.value = ''; 
+        triggerUpdate();
+        changeCategory(newCat);
     }
 
     function deleteCategory(cat, event) {
@@ -490,7 +533,7 @@
             customCategories = customCategories.filter(c => c !== cat);
             products.forEach(p => { if (p.category === cat) p.category = '未分類'; });
             if (currentCategory === cat) currentCategory = '所有';
-            saveData(); renderCategories(); updateProductView();
+            triggerUpdate();
         }
     }
 
@@ -509,7 +552,8 @@
 
     function changeCategory(cat) {
         if (isEditMode) toggleEditMode();
-        currentCategory = cat; renderCategories();
+        currentCategory = cat; 
+        renderCategories();
         document.getElementById('brandFilter').value = '';
         document.getElementById('capacityFilter').value = '';
         document.getElementById('searchInput').value = '';
@@ -530,13 +574,13 @@
             const targetIdx = customCategories.indexOf(targetId);
             customCategories.splice(draggedIdx, 1);
             customCategories.splice(targetIdx, 0, draggedId);
-            saveData(); renderCategories();
+            triggerUpdate();
         } else if (targetType === 'prod') {
             const draggedIdx = products.findIndex(p => p.id == draggedId);
             const targetIdx = products.findIndex(p => p.id == targetId);
             const [draggedItem] = products.splice(draggedIdx, 1);
             products.splice(targetIdx, 0, draggedItem);
-            saveData(); updateProductView();
+            triggerUpdate();
         }
     }
 
@@ -547,7 +591,7 @@
     }
 
     function saveAsFrequentList() {
-        if (frequentLists.length >= 3) { alert("最多只能新增 3 個常買清單！"); return; }
+        if (frequentLists.length >= 10) { alert("常買清單最多只能新增 10 個！"); return; }
         if (Object.keys(cart).length === 0) { alert("清單內沒有商品無法儲存！"); return; }
         const name = prompt("請為這個常買清單命名 (例如: 每週補貨)：");
         if (!name || name.trim() === "") return;
@@ -555,30 +599,150 @@
         const itemsToSave = Object.keys(cart).map(id => ({ id: parseInt(id), qty: cart[id] }));
         frequentLists.push({ id: Date.now(), name: name.trim(), items: itemsToSave });
         
-        saveData(); renderFrequentLists(); alert(`已建立常買清單「${name}」！`);
+        triggerUpdate();
+        showToast(`已建立常買清單「${name.trim()}」！`);
+    }
+
+    function clearCart() {
+        if (Object.keys(cart).length === 0) { alert('目前的清單已經是空的囉！'); return; }
+        if (confirm('確定要清空目前清單內的所有商品嗎？')) {
+            cart = {};
+            triggerUpdate();
+            if (document.getElementById('cartModal').style.display === 'flex') {
+                renderCartTable();
+            }
+        }
+    }
+
+    function toggleFreqDropdown(event, prodId) {
+        event.stopPropagation();
+        closeAllDropdowns();
+        const dropdown = document.getElementById(`freq_dropdown_${prodId}`);
+        if (dropdown) {
+            dropdown.style.display = 'block';
+        }
+    }
+
+    function closeAllDropdowns() {
+        document.querySelectorAll('[id^="freq_dropdown_"]').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', () => {
+        closeAllDropdowns();
+    });
+
+    function addProdToSpecificFreq(prodId, listId) {
+        closeAllDropdowns();
+        const list = frequentLists.find(l => l.id === listId);
+        const prod = products.find(p => p.id === prodId);
+        if (!list || !prod) return;
+
+        const qtyInput = document.getElementById(`qty_${prodId}`);
+        let addQty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
+
+        let existing = list.items.find(i => i.id === prodId);
+        if (existing) {
+            existing.qty += addQty;
+        } else {
+            list.items.push({ id: prodId, qty: addQty });
+        }
+        triggerUpdate();
+        showToast(`已將「${prod.name}」加入「${list.name}」`);
+    }
+
+    function addNewFreqAndAddProd(prodId) {
+        closeAllDropdowns();
+        if (frequentLists.length >= 10) {
+            alert("常買清單最多只能新增 10 個！");
+            return;
+        }
+        const name = prompt("請為這個新常買清單命名 (例如: 辦公室補貨)：");
+        if (!name || name.trim() === "") return;
+
+        const newListId = Date.now();
+        const qtyInput = document.getElementById(`qty_${prodId}`);
+        let addQty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
+
+        frequentLists.push({
+            id: newListId,
+            name: name.trim(),
+            items: [{ id: prodId, qty: addQty }]
+        });
+        triggerUpdate();
+        const prod = products.find(p => p.id === prodId);
+        showToast(`已建立並將「${prod.name}」加入「${name.trim()}」`);
     }
 
     function openFrequentPreview(listId) {
         currentPreviewFreqId = listId;
-        const list = frequentLists.find(f => f.id === listId);
-        if(!list) return;
-        document.getElementById('freqPreviewTitle').innerText = `常買清單：${list.name}`;
-        
-        const itemsData = list.items.map(item => {
-            let pid = typeof item === 'object' ? item.id : item;
-            let pqty = typeof item === 'object' ? item.qty : 1;
-            let prod = products.find(p => p.id === pid);
-            return prod ? { ...prod, qty: pqty } : undefined;
-        }).filter(p => p !== undefined);
-
-        const previewContainer = document.getElementById('freqPreviewList');
-        previewContainer.innerHTML = itemsData.length === 0 ? `<div style="text-align:center; color:#999;">商品已全數被刪除。</div>` : itemsData.map(p => `
-            <div class="preview-item">
-                <img src="${p.image}">
-                <div style="flex-grow:1; font-size:14px; font-weight:bold;">${p.name}</div>
-                <div style="font-size:14px; font-weight:bold; color:var(--primary-color);">x ${p.qty}</div>
-            </div>`).join('');
+        renderFreqEditModal();
         document.getElementById('freqPreviewModal').style.display = 'flex';
+    }
+
+    function renderFreqEditModal() {
+        const list = frequentLists.find(f => f.id === currentPreviewFreqId);
+        if(!list) return;
+
+        document.getElementById('freqPreviewTitle').innerHTML = `
+            常買清單：<input type="text" id="freqEditName" value="${list.name}" onchange="updateFreqName(${list.id}, this.value)" style="padding:4px 8px; font-size:16px; border:1px solid #ccc; border-radius:4px; width:150px; font-weight:bold;">
+        `;
+        
+        const previewContainer = document.getElementById('freqPreviewList');
+        if (list.items.length === 0) {
+            previewContainer.innerHTML = `<div style="text-align:center; color:#999; padding:15px; border:1px solid #eee; border-radius:5px; background:white;">此常買清單目前沒有商品。</div>`;
+        } else {
+            previewContainer.innerHTML = `
+                <div style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; padding: 5px; background:white;">
+                    ${list.items.map((item) => {
+                        let prod = products.find(p => p.id === item.id);
+                        if (!prod) return '';
+                        return `
+                            <div class="preview-item">
+                                <img src="${prod.image}">
+                                <div style="flex-grow:1; font-size:14px; font-weight:bold; text-align:left;">${prod.name}</div>
+                                <div style="display:flex; align-items:center; gap:5px;">
+                                    <span style="font-size:12px; color:#666;">數量:</span>
+                                    <input type="number" value="${item.qty}" min="1" max="100" style="width:45px; text-align:center; padding:3px;" onchange="updateFreqItemQty(${list.id}, ${prod.id}, this.value)">
+                                </div>
+                                <button onclick="removeFreqItem(${list.id}, ${prod.id})" style="background:#ff4757; color:white; border:none; border-radius:3px; padding:4px 8px; cursor:pointer; font-size:12px;">刪除</button>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+    }
+
+    function updateFreqName(listId, newName) {
+        const list = frequentLists.find(f => f.id === listId);
+        if (list && newName.trim() !== '') {
+            list.name = newName.trim();
+            triggerUpdate();
+        }
+    }
+
+    function updateFreqItemQty(listId, prodId, newQty) {
+        const list = frequentLists.find(f => f.id === listId);
+        if (!list) return;
+        const item = list.items.find(i => i.id === prodId);
+        if (item) {
+            let val = parseInt(newQty);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > 100) val = 100;
+            item.qty = val;
+            triggerUpdate();
+            renderFreqEditModal();
+        }
+    }
+
+    function removeFreqItem(listId, prodId) {
+        const list = frequentLists.find(f => f.id === listId);
+        if (!list) return;
+        list.items = list.items.filter(i => i.id !== prodId);
+        triggerUpdate();
+        renderFreqEditModal();
     }
 
     function importFrequentList() {
@@ -586,25 +750,28 @@
         if(!list) return;
         let importCount = 0;
         
-        list.items.forEach(item => { 
-            let id = typeof item === 'object' ? item.id : item;
-            let qty = typeof item === 'object' ? item.qty : 1;
-            if (products.some(p => p.id === id)) { 
-                cart[id] = qty; 
+        for (let item of list.items) { 
+            if (products.some(p => p.id === item.id)) { 
+                if (Object.keys(cart).length >= 100 && !cart[item.id]) {
+                    alert("檢視清單最多只能加入 100 個商品！");
+                    break;
+                }
+                cart[item.id] = item.qty; 
                 importCount++; 
             } 
-        });
+        }
 
-        updateCartDisplay();
+        triggerUpdate();
         closeModal('freqPreviewModal'); 
         
         if (importCount > 0) { openCartModal(); } else { alert('沒有有效商品可匯入。'); }
     }
 
     function deleteFrequentList() {
-        if(confirm("確定要刪除這個常買清單嗎？")) {
+        if(confirm("確定要刪除這個常買清單設定嗎？")) {
             frequentLists = frequentLists.filter(f => f.id !== currentPreviewFreqId);
-            saveData(); renderFrequentLists(); closeModal('freqPreviewModal');
+            triggerUpdate(); 
+            closeModal('freqPreviewModal');
         }
     }
 
@@ -627,11 +794,13 @@
         if (selectedForMove.size === 0) { alert('請先勾選商品！'); return; }
         const targetCat = document.getElementById('moveTargetCat').value;
         products.forEach(p => { if (selectedForMove.has(p.id)) p.category = targetCat; });
-        saveData(); alert('移動成功！'); toggleEditMode();
+        triggerUpdate(); 
+        alert('移動成功！'); 
+        toggleEditMode();
     }
 
     function updateBrandSuggestions() {
-        const brands = [...new Set(products.map(p => p.brand).filter(b => b && b !== '無'))];
+        const brands = [...new Set(products.map(p => p.brand).filter(b => b))];
         document.getElementById('brandSuggestions').innerHTML = brands.map(b => `<option value="${b}">`).join('');
     }
 
@@ -697,7 +866,7 @@
             products.push(prodData);
         }
 
-        saveData(); checkBudget();
+        triggerUpdate();
         
         if (currentCategory !== '所有' && currentCategory !== prodData.category) changeCategory(prodData.category);
         else updateProductView();
@@ -710,7 +879,10 @@
             products = products.filter(p => p.id !== id);
             delete cart[id];
             selectedForMove.delete(id);
-            saveData(); updateCartDisplay(); updateProductView();
+            triggerUpdate();
+            if (document.getElementById('cartModal').style.display === 'flex') {
+                renderCartTable();
+            }
         }
     }
 
@@ -765,7 +937,6 @@
 
             const categoryBadge = (currentCategory === '所有') ? `<div style="position:absolute; top:10px; left:10px; background:var(--primary-color); color:white; font-size:11px; padding:2px 8px; border-radius:10px;">${p.category}</div>` : '';
             
-            // 選填欄位若沒有填寫則完全不顯示
             const brandHtml = p.brand ? `<div class="product-meta">品牌: ${p.brand}</div>` : '';
             const capacityHtml = p.capacity ? `<div class="product-meta">容量/規格: ${p.capacity}</div>` : '';
             const customHtml = p.customTitle && p.customValue ? `<div class="product-meta">${p.customTitle}: ${p.customValue}</div>` : '';
@@ -773,10 +944,26 @@
             
             const draggableAttrs = !isEditMode ? `draggable="true" ondragstart="dragStart(event, 'prod', ${p.id})" ondragover="allowDrop(event)" ondrop="drop(event, 'prod', ${p.id})" ondragend="dragEnd(event)"` : '';
 
+            let freqDropdownHtml = `
+                <div id="freq_dropdown_${p.id}" style="display:none; position:absolute; top:35px; right:5px; background:white; border:1px solid #ccc; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; padding:6px; min-width:140px; text-align:left;" onclick="event.stopPropagation()">
+                    <div style="font-size:11px; color:#777; padding:4px 6px; border-bottom:1px solid #eee; margin-bottom:4px;">選擇常買清單：</div>
+                    ${frequentLists.length > 0 ? frequentLists.map(l => `
+                        <div onclick="addProdToSpecificFreq(${p.id}, ${l.id})" style="padding:6px 8px; font-size:13px; cursor:pointer; border-radius:4px; color:#333;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">${l.name}</div>
+                    `).join('') : '<div style="font-size:12px; color:#999; padding:4px;">尚無清單</div>'}
+                    ${frequentLists.length < 10 ? `
+                        <div onclick="addNewFreqAndAddProd(${p.id})" style="padding:6px 8px; font-size:13px; cursor:pointer; color:var(--primary-color); font-weight:bold; border-top:1px solid #eee; margin-top:4px; padding-top:6px;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">+ 新增常買清單</div>
+                    ` : ''}
+                </div>
+            `;
+
             return `
                 <div class="product-card" ${draggableAttrs} ${isEditMode && selectedForMove.has(p.id) ? 'style="border: 2px solid var(--edit-color);"' : ''}>
                     ${categoryBadge}
                     <div class="action-btns">
+                        <div style="position:relative;">
+                            <button class="card-btn btn-add-freq" onclick="toggleFreqDropdown(event, ${p.id})" title="加到常買清單">⭐</button>
+                            ${freqDropdownHtml}
+                        </div>
                         <button class="card-btn btn-edit-prod" onclick="openEditProductModal(${p.id})" title="編輯商品">✏️</button>
                         <button class="card-btn btn-del-prod" onclick="deleteProduct(${p.id})" title="刪除商品">✖</button>
                     </div>
@@ -805,33 +992,38 @@
 
     function toggleCart(id, isChecked) {
         if (isChecked) {
+            if (Object.keys(cart).length >= 100 && !cart[id]) {
+                alert("檢視清單最多只能加入 100 個商品！");
+                updateProductView();
+                return;
+            }
             const input = document.getElementById(`qty_${id}`);
             cart[id] = input ? (parseInt(input.value) || 1) : 1;
         } else {
             delete cart[id];
         }
-        updateCartDisplay();
+        triggerUpdate();
     }
 
     function updateHomeQty(id, val) {
         if (cart[id]) {
             cart[id] = parseInt(val) || 1;
-            updateCartDisplay();
+            triggerUpdate();
         }
     }
 
     function updateModalQty(id, val) {
         if (cart[id]) {
             cart[id] = parseInt(val) || 1;
-            updateCartDisplay();
-            renderCartTable(); 
-            updateProductView(); 
+            triggerUpdate();
+            if (document.getElementById('cartModal').style.display === 'flex') {
+                renderCartTable();
+            }
         }
     }
 
     function updateCartDisplay() {
         document.getElementById('cartCount').innerText = Object.keys(cart).length;
-        checkBudget();
     }
 
     function openCartModal() {
@@ -843,7 +1035,7 @@
     
     function closeModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
-        updateProductView(); 
+        triggerUpdate(); 
     }
 
     function renderCartTable() {
@@ -872,10 +1064,10 @@
                     <td>${brandText}</td>
                     <td>${capacityText}</td>
                     <td>${customText}</td>
-                    <td class="action-col">
+                    <td>
                         <input type="number" class="qty-input" value="${qty}" min="1" max="100" onchange="updateQtyLimit(this); updateModalQty(${p.id}, this.value)">
+                        <span class="print-qty">${qty}</span>
                     </td>
-                    <td class="print-qty">${qty}</td>
                     <td class="price-col" style="color:var(--text-muted);">${priceText}</td>
                     <td class="price-col" style="color:var(--warning-color); font-weight:bold;">${subtotalText}</td>
                     <td><div class="export-checkbox"></div></td>
@@ -887,9 +1079,10 @@
 
     function removeFromCart(id) {
         delete cart[id];
-        updateCartDisplay();
-        renderCartTable();
-        updateProductView();
+        triggerUpdate();
+        if (document.getElementById('cartModal').style.display === 'flex') {
+            renderCartTable();
+        }
     }
 
     function togglePriceExport() {
@@ -929,6 +1122,44 @@
             link.href = canvas.toDataURL('image/jpeg', 0.95);
             link.click();
 
+            document.querySelector('.export-header').style.display = 'none';
+            document.getElementById('exportDate').style.display = 'none';
+            actions.forEach(el => el.style.display = ''); 
+            area.style.border = "none";
+            area.classList.remove('exporting');
+        });
+    }
+
+    function exportToPDF() {
+        if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法匯出喔！'); return; }
+        const area = document.getElementById('export-area');
+        
+        area.classList.add('exporting');
+        document.querySelector('.export-header').style.display = 'block';
+        
+        let total = 0;
+        products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
+        
+        const dateHtml = `
+            <div class="export-total-line">預估總金額：$${total}</div>
+            <div>匯出日期: ${new Date().toLocaleDateString('zh-TW')}</div>
+        `;
+        document.getElementById('exportDate').innerHTML = dateHtml;
+        document.getElementById('exportDate').style.display = 'block';
+        
+        const actions = document.querySelectorAll('.action-col');
+        actions.forEach(el => el.style.display = 'none'); 
+        area.style.border = "1px solid #ccc"; 
+
+        const opt = {
+            margin:       10,
+            filename:     '待購清單.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 3, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().from(area).set(opt).save().then(() => {
             document.querySelector('.export-header').style.display = 'none';
             document.getElementById('exportDate').style.display = 'none';
             actions.forEach(el => el.style.display = ''); 
