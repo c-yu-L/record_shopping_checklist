@@ -147,7 +147,6 @@
         #export-area.hide-prices .price-col { display: none; }
         #export-area.hide-prices .export-total-line { display: none; }
         
-        /* 匯出時隱藏輸入框，改為純數字文字顯示 */
         .print-qty { display: none; }
         .exporting .qty-input { display: none !important; }
         .exporting .print-qty { display: inline !important; }
@@ -346,6 +345,7 @@
             <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <button class="btn-action" style="background: var(--edit-color);" onclick="saveAsFrequentList()">⭐ 設為常買</button>
                 <button class="btn-action" style="background: #e84118;" onclick="clearCart()">🗑️ 清空全部</button>
+                <button class="btn-action" style="background: #2ed573;" onclick="shareCartList()">🔗 一鍵分享</button>
                 <label style="cursor: pointer; font-weight: bold; font-size: 13px; background:#e6f7ff; padding:8px 10px; border-radius:5px; border:1px solid #91d5ff;">
                     <input type="checkbox" id="showPriceToggle" checked onchange="togglePriceExport()"> 匯出顯示金額
                 </label>
@@ -422,7 +422,91 @@
     let draggedId = null;
     let currentPreviewFreqId = null;
 
+    // 檢查是否有分享的 viewList 參數
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewListData = urlParams.get('viewList');
+    if (viewListData) {
+        try {
+            const sharedItems = JSON.parse(decodeURIComponent(viewListData));
+            window.addEventListener('DOMContentLoaded', () => {
+                renderSharedView(sharedItems);
+            });
+        } catch (e) {
+            console.error("解析分享清單失敗", e);
+        }
+    }
+
+    function renderSharedView(items) {
+        let total = 0;
+        let rowsHtml = items.map(p => {
+            const qty = p.qty || 1;
+            const price = parseInt(p.price) || 0;
+            const subtotal = price * qty;
+            if (price > 0) total += subtotal;
+            const priceText = price > 0 ? '$' + price : '-';
+            const subtotalText = price > 0 ? '$' + subtotal : '-';
+            const brandText = p.brand ? p.brand : '-';
+            const capacityText = p.capacity ? p.capacity : '-';
+            const customText = p.customTitle && p.customValue ? `${p.customTitle}: ${p.customValue}` : '-';
+
+            return `
+                <tr>
+                    <td><img src="${p.image}" alt="${p.name}" style="width:50px; height:50px; object-fit:contain; background:white;"></td>
+                    <td>${p.name}</td>
+                    <td>${brandText}</td>
+                    <td>${capacityText}</td>
+                    <td>${customText}</td>
+                    <td>${qty}</td>
+                    <td class="price-col" style="color:#777;">${priceText}</td>
+                    <td class="price-col" style="color:#e84118; font-weight:bold;">${subtotalText}</td>
+                    <td><div style="width:25px; height:25px; border:2px solid #333; margin:0 auto;"></div></td>
+                </tr>
+            `;
+        }).join('');
+
+        document.body.innerHTML = `
+            <div style="max-width: 900px; margin: 30px auto; padding: 25px; background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h1 style="color: #4a90e2; font-size: 24px; margin-bottom: 5px;">待購清單</h1>
+                    <p style="font-size: 13px; color: #777;">有人與您分享了一份待購清單</p>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #eee; flex-wrap: wrap; gap: 10px;">
+                    <div style="font-weight: bold; font-size: 16px; color: #e84118;">預估總金額：$${total}</div>
+                    <div style="font-size: 13px; color: #666;">分享日期: ${new Date().toLocaleDateString('zh-TW')}</div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 14px;">
+                        <thead>
+                            <tr style="background: #f0f0f0;">
+                                <th style="border: 1px solid #333; padding: 10px;">商品圖片</th>
+                                <th style="border: 1px solid #333; padding: 10px;">品名</th>
+                                <th style="border: 1px solid #333; padding: 10px;">品牌</th>
+                                <th style="border: 1px solid #333; padding: 10px;">容量/規格</th>
+                                <th style="border: 1px solid #333; padding: 10px;">自定義</th>
+                                <th style="border: 1px solid #333; padding: 10px;">數量</th>
+                                <th style="border: 1px solid #333; padding: 10px;" class="price-col">單價</th>
+                                <th style="border: 1px solid #333; padding: 10px;" class="price-col">小計</th>
+                                <th style="border: 1px solid #333; padding: 10px;">代辦勾選</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="${window.location.origin + window.location.pathname}" style="display: inline-block; padding: 12px 25px; background: #2ed573; color: white; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">我也要製作自己的待購清單</a>
+                </div>
+            </div>
+        `;
+    }
+
     function init() {
+        if (viewListData) return; // 如果是檢視分享頁面則跳過初始化主程式
+
         const savedBudget = localStorage.getItem('daigou_budget');
         if (savedBudget) document.getElementById('budgetInput').value = savedBudget;
 
@@ -611,6 +695,43 @@
             if (document.getElementById('cartModal').style.display === 'flex') {
                 renderCartTable();
             }
+        }
+    }
+
+    function shareCartList() {
+        if (Object.keys(cart).length === 0) {
+            alert('清單內沒有商品無法分享喔！');
+            return;
+        }
+        const itemsToShare = products.filter(p => cart[p.id]).map(p => ({
+            name: p.name,
+            brand: p.brand || '',
+            capacity: p.capacity || '',
+            customTitle: p.customTitle || '',
+            customValue: p.customValue || '',
+            price: p.price || '',
+            qty: cart[p.id],
+            image: p.image || fallbackImage
+        }));
+
+        if (itemsToShare.length === 0) {
+            alert('清單內沒有有效商品！');
+            return;
+        }
+
+        const payload = JSON.stringify(itemsToShare);
+        const encoded = encodeURIComponent(payload);
+        const baseUrl = window.location.origin + window.location.pathname;
+        const shareUrl = `${baseUrl}?viewList=${encoded}`;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                showToast('🔗 分享連結已複製！傳給他人即可直接查看清單');
+            }).catch(() => {
+                prompt("請複製以下分享連結：", shareUrl);
+            });
+        } else {
+            prompt("請複製以下分享連結：", shareUrl);
         }
     }
 
