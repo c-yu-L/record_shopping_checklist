@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>待購清單</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
@@ -45,7 +45,7 @@
         .btn-add { background-color: #2ed573; }
         .btn-add:hover { background-color: #26b360; }
 
-        .freq-bar { display: flex; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px dashed #eee; width: 100%; flex-wrap: wrap; }
+        .freq-bar { display: flex; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px dashed #eee; width: 100%; }
         .freq-bar-title { font-size: 14px; font-weight: bold; color: var(--freq-color); }
         .btn-freq { padding: 5px 15px; background: #ffe0df; color: var(--freq-color); border: 1px solid var(--freq-color); border-radius: 15px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; }
         .btn-freq:hover { background: var(--freq-color); color: white; }
@@ -98,7 +98,7 @@
         .product-card:active { cursor: grabbing; }
         .product-card.dragging { opacity: 0.4; transform: scale(0.95); }
         .product-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
-        .product-image { width: 100%; height: 160px; object-fit: contain; margin-bottom: 15px; background: #fafafa; border-radius: 5px; pointer-events: none; }
+        .product-image { width: 100%; height: 160px; object-fit: contain; margin-bottom: 15px; background: white; border-radius: 5px; pointer-events: none; }
         .product-title { font-size: 16px; font-weight: bold; margin-bottom: 5px; pointer-events: none; }
         .product-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 5px; pointer-events: none; }
         .product-price { font-size: 14px; font-weight: bold; color: var(--warning-color); margin-bottom: 5px; pointer-events: none; }
@@ -134,7 +134,7 @@
         .export-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 14px; }
         .export-table th, .export-table td { border: 1px solid #333; padding: 10px; }
         .export-table th { background: #f0f0f0; }
-        .export-table img { width: 50px; height: 50px; object-fit: contain; }
+        .export-table img { width: 50px; height: 50px; object-fit: contain; background: white; }
         .export-checkbox { width: 25px; height: 25px; border: 2px solid #333; margin: 0 auto; }
         .export-footer { text-align: right; margin-top: 15px; font-size: 14px; display: none; }
         .export-total-line { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: var(--warning-color); }
@@ -150,10 +150,10 @@
 
         .preview-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
         .preview-item { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #eee; border-radius: 5px; }
-        .preview-item img { width: 40px; height: 40px; object-fit: contain; }
+        .preview-item img { width: 40px; height: 40px; object-fit: contain; background: white; }
 
         /* =========================================
-           📱 全方位完美適應手機介面 (Universal Mobile RWD)
+           📱 全方位適應手機介面
            ========================================= */
         @media (max-width: 768px) {
             header { padding: 12px; gap: 10px; }
@@ -162,7 +162,6 @@
             .logo-area h1 { font-size: 22px; }
             .logo-area p { font-size: 11px; }
 
-            /* 搜尋框與按鈕在手機全面滿版並放大文字，防止 iOS 放大鏡效果 (字體 >= 16px) */
             .search-box { width: 100%; padding: 12px 15px; font-size: 16px; border-radius: 25px; }
             .header-controls { width: 100%; flex-direction: column; align-items: stretch; gap: 10px; }
             
@@ -175,10 +174,8 @@
             .freq-bar div { display: flex; flex-wrap: wrap; gap: 6px !important; }
             .btn-freq { padding: 6px 12px; font-size: 12px; }
 
-            /* 主體容器轉為單行堆疊 */
             .container { flex-direction: column; padding: 0 8px; gap: 12px; margin-top: 10px; }
             
-            /* 側邊欄分類在手機上轉為兩欄式整齊方塊網格 */
             .sidebar { width: 100%; }
             .category-list { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #000080; border-bottom: none; border-right: none; }
             .category-btn { border-right: 1px solid #000080; padding: 14px 10px; font-size: 16px; }
@@ -190,7 +187,6 @@
             .add-category-box input { flex-grow: 1; margin-bottom: 0; padding: 12px; font-size: 15px; }
             .add-category-box button { width: auto; padding: 12px 18px; font-size: 15px; }
             
-            /* 內容區塊與篩選器自動排版 */
             .content-header { flex-direction: column; align-items: stretch; gap: 10px; }
             .filters { display: flex; flex-direction: column; width: 100%; gap: 8px; }
             .filters select { width: 100%; padding: 12px; font-size: 15px; }
@@ -203,12 +199,10 @@
             .move-toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
             .move-toolbar select { width: 100%; padding: 10px; }
 
-            /* 手機版商品卡片常駐顯示編輯/刪除按鈕 */
             .action-btns { display: flex; }
             .product-card { padding: 40px 10px 15px 10px; }
             .product-image { height: 130px; }
             
-            /* 彈窗與購物車全面適應小螢幕 */
             .modal-content { width: 96%; padding: 20px 12px; max-height: 88vh; }
             .modal-close { top: 12px; right: 15px; font-size: 32px; }
             
@@ -216,7 +210,6 @@
             #cartModal .modal-content > div:nth-child(3) > div { justify-content: space-between; width: 100%; }
         }
 
-        /* 針對極小螢幕手機（如 320px 寬度的 iPhone SE 舊款）的額外防護 */
         @media (max-width: 360px) {
             .product-grid { grid-template-columns: 1fr; }
             .filters select { font-size: 14px; }
@@ -291,8 +284,8 @@
         <h2 style="margin-bottom: 20px; text-align: center;" id="productModalTitle">新增商品</h2>
         
         <div class="form-group">
-            <label>商品圖片 (選填)</label>
-            <input type="file" id="prodImage" accept="image/*">
+            <label>商品圖片 (支援 PNG、JPG、WEBP)</label>
+            <input type="file" id="prodImage" accept="image/png, image/jpeg, image/webp">
         </div>
         <div class="form-group">
             <label>商品分類</label>
@@ -411,19 +404,29 @@
         document.getElementById('minPriceF').addEventListener('input', updateProductView);
         document.getElementById('maxPriceF').addEventListener('input', updateProductView);
         
+        // 圖片上傳處理：強制填滿白底，解決透明 PNG 變黑底的問題
         document.getElementById('prodImage').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
+
             const reader = new FileReader();
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const scaleSize = 300 / img.width;
-                    canvas.width = 300; canvas.height = img.height * scaleSize;
+                    const MAX_WIDTH = 300;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
                     const ctx = canvas.getContext('2d');
+                    
+                    // 【關鍵修正】強制先填入白底，避免 PNG 透明背景變成黑色
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    tempImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    tempImageBase64 = canvas.toDataURL('image/jpeg', 0.9);
                 }
                 img.src = event.target.result;
             }
