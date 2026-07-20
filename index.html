@@ -119,7 +119,7 @@
         /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
         .modal-content { background: white; width: 900px; max-height: 90vh; border-radius: 10px; padding: 30px; overflow-y: auto; position: relative; }
-        .modal-content.small { width: 400px; max-width: 100%; }
+        .modal-content.small { width: 450px; max-width: 100%; }
         .modal-close { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #999; z-index: 10; }
         
         .form-group { margin-bottom: 15px; text-align: left; }
@@ -129,7 +129,7 @@
         
         /* Export Area */
         .table-wrapper { width: 100%; overflow-x: auto; background: white; }
-        #export-area { background: white; padding: 20px; min-width: 650px; }
+        #export-area { background: white; padding: 20px; min-width: 700px; }
         .export-header { text-align: center; margin-bottom: 20px; display: none; }
         .export-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 14px; }
         .export-table th, .export-table td { border: 1px solid #333; padding: 10px; }
@@ -304,6 +304,17 @@
             <label>容量/規格 (選填)</label>
             <input type="text" id="prodCapacity" placeholder="例如: 3顆裝">
         </div>
+        <!-- 自定義標題與內容 (選填) -->
+        <div class="form-group" style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+                <label>自定義標題 (選填)</label>
+                <input type="text" id="prodCustomTitle" placeholder="例如: 甜度">
+            </div>
+            <div style="flex: 2;">
+                <label>自定義內容 (選填)</label>
+                <input type="text" id="prodCustomValue" placeholder="例如: 微糖">
+            </div>
+        </div>
         <div class="form-group">
             <label>價格 (選填)</label>
             <input type="number" id="prodPrice" placeholder="例如: 100" min="0">
@@ -343,7 +354,8 @@
                             <th>商品圖片</th>
                             <th>品名</th>
                             <th>品牌</th>
-                            <th>容量</th>
+                            <th>容量/規格</th>
+                            <th>自定義</th>
                             <th>數量</th>
                             <th class="price-col">單價</th>
                             <th class="price-col">小計</th>
@@ -420,7 +432,6 @@
                     canvas.height = img.height * scaleSize;
                     const ctx = canvas.getContext('2d');
                     
-                    // 【關鍵修正】強制先填入白底，避免 PNG 透明背景變成黑色
                     ctx.fillStyle = '#FFFFFF';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -634,6 +645,8 @@
         document.getElementById('prodName').value = '';
         document.getElementById('prodBrand').value = '';
         document.getElementById('prodCapacity').value = '';
+        document.getElementById('prodCustomTitle').value = '';
+        document.getElementById('prodCustomValue').value = '';
         document.getElementById('prodPrice').value = '';
         document.getElementById('prodImage').value = '';
         tempImageBase64 = fallbackImage;
@@ -651,8 +664,10 @@
 
         document.getElementById('prodCategory').innerHTML = ['未分類', ...customCategories].map(c => `<option value="${c}" ${c === p.category ? 'selected' : ''}>${c}</option>`).join('');
         document.getElementById('prodName').value = p.name;
-        document.getElementById('prodBrand').value = p.brand === '無' ? '' : p.brand;
-        document.getElementById('prodCapacity').value = p.capacity === '無' ? '' : p.capacity;
+        document.getElementById('prodBrand').value = p.brand || '';
+        document.getElementById('prodCapacity').value = p.capacity || '';
+        document.getElementById('prodCustomTitle').value = p.customTitle || '';
+        document.getElementById('prodCustomValue').value = p.customValue || '';
         document.getElementById('prodPrice').value = p.price || '';
         document.getElementById('prodImage').value = '';
         tempImageBase64 = p.image;
@@ -666,8 +681,10 @@
         const prodData = {
             category: document.getElementById('prodCategory').value,
             name: name,
-            brand: document.getElementById('prodBrand').value.trim() || '無',
-            capacity: document.getElementById('prodCapacity').value.trim() || '無',
+            brand: document.getElementById('prodBrand').value.trim() || '',
+            capacity: document.getElementById('prodCapacity').value.trim() || '',
+            customTitle: document.getElementById('prodCustomTitle').value.trim() || '',
+            customValue: document.getElementById('prodCustomValue').value.trim() || '',
             price: document.getElementById('prodPrice').value.trim() || '',
             image: tempImageBase64
         };
@@ -707,7 +724,7 @@
 
         let filtered = products.filter(p => {
             let matchCat = (currentCategory === '所有') ? true : (p.category === currentCategory);
-            let matchKey = p.name.includes(keyword) || p.brand.includes(keyword);
+            let matchKey = p.name.includes(keyword) || (p.brand && p.brand.includes(keyword)) || (p.customValue && p.customValue.includes(keyword));
             let matchBrand = brandF === '' || p.brand === brandF;
             let matchCap = capF === '' || p.capacity === capF;
             let matchPrice = true;
@@ -726,11 +743,11 @@
         });
 
         const viewProducts = (currentCategory === '所有') ? products : products.filter(p => p.category === currentCategory);
-        const brands = [...new Set(viewProducts.map(p => p.brand).filter(b => b !== '無'))];
-        const capacities = [...new Set(viewProducts.map(p => p.capacity).filter(c => c !== '無'))];
+        const brands = [...new Set(viewProducts.map(p => p.brand).filter(b => b))];
+        const capacities = [...new Set(viewProducts.map(p => p.capacity).filter(c => c))];
 
         updateSelect('brandFilter', '所有品牌', brands, brandF);
-        updateSelect('capacityFilter', '所有容量', capacities, capF);
+        updateSelect('capacityFilter', '所有容量/規格', capacities, capF);
 
         if(filtered.length === 0) { grid.innerHTML = `<div class="empty-state">此條件下沒有商品。</div>`; return; }
 
@@ -747,7 +764,13 @@
                    </div>`;
 
             const categoryBadge = (currentCategory === '所有') ? `<div style="position:absolute; top:10px; left:10px; background:var(--primary-color); color:white; font-size:11px; padding:2px 8px; border-radius:10px;">${p.category}</div>` : '';
+            
+            // 選填欄位若沒有填寫則完全不顯示
+            const brandHtml = p.brand ? `<div class="product-meta">品牌: ${p.brand}</div>` : '';
+            const capacityHtml = p.capacity ? `<div class="product-meta">容量/規格: ${p.capacity}</div>` : '';
+            const customHtml = p.customTitle && p.customValue ? `<div class="product-meta">${p.customTitle}: ${p.customValue}</div>` : '';
             const priceHtml = p.price ? `<div class="product-price">單價: $${p.price}</div>` : '';
+            
             const draggableAttrs = !isEditMode ? `draggable="true" ondragstart="dragStart(event, 'prod', ${p.id})" ondragover="allowDrop(event)" ondrop="drop(event, 'prod', ${p.id})" ondragend="dragEnd(event)"` : '';
 
             return `
@@ -759,8 +782,9 @@
                     </div>
                     <img src="${p.image}" class="product-image" alt="${p.name}">
                     <div class="product-title">${p.name}</div>
-                    <div class="product-meta">品牌: ${p.brand}</div>
-                    <div class="product-meta">容量: ${p.capacity}</div>
+                    ${brandHtml}
+                    ${capacityHtml}
+                    ${customHtml}
                     ${priceHtml}
                     ${actionHtml}
                 </div>
@@ -825,7 +849,7 @@
     function renderCartTable() {
         const tbody = document.getElementById('cartItems');
         if (Object.keys(cart).length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" style="padding: 30px; color:#777;">目前清單是空的，請先將商品打勾加入清單。</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" style="padding: 30px; color:#777;">目前清單是空的，請先將商品打勾加入清單。</td></tr>`;
             return;
         }
 
@@ -837,13 +861,17 @@
             
             const priceText = price > 0 ? '$' + price : '-';
             const subtotalText = price > 0 ? '$' + subtotal : '-';
+            const brandText = p.brand ? p.brand : '-';
+            const capacityText = p.capacity ? p.capacity : '-';
+            const customText = p.customTitle && p.customValue ? `${p.customTitle}: ${p.customValue}` : '-';
 
             return `
                 <tr>
                     <td><img src="${p.image}" alt="${p.name}"></td>
                     <td>${p.name}</td>
-                    <td>${p.brand}</td>
-                    <td>${p.capacity}</td>
+                    <td>${brandText}</td>
+                    <td>${capacityText}</td>
+                    <td>${customText}</td>
                     <td class="action-col">
                         <input type="number" class="qty-input" value="${qty}" min="1" max="100" onchange="updateQtyLimit(this); updateModalQty(${p.id}, this.value)">
                     </td>
