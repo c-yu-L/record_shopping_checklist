@@ -254,7 +254,7 @@
 
             <button class="btn-action btn-add" onclick="openAddProductModal()">+ 新增商品</button>
             <button class="btn-action" onclick="openCartModal()">🛒 檢視 / 匯出 (<span id="cartCount">0</span>)</button>
-            <!-- 新增一鍵切換電腦版按鈕 -->
+            <!-- 一鍵切換電腦版按鈕 -->
             <button class="btn-action" id="viewToggleBtn" style="background: #6c757d;" onclick="toggleDesktopMode()">💻 切換電腦版</button>
         </div>
     </div>
@@ -433,7 +433,9 @@
     let draggedId = null;
     let currentPreviewFreqId = null;
 
-    let isDesktopMode = localStorage.getItem('daigou_desktop_mode') === 'true';
+    // 檢查是否為桌面捷徑（Standalone 模式），若不是則每次開啟連結皆預設為手機原始設定
+    let isStandaloneShortcut = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    let isDesktopMode = isStandaloneShortcut; 
 
     function init() {
         const savedBudget = localStorage.getItem('daigou_budget');
@@ -479,7 +481,6 @@
         });
     }
 
-    // 初始化與切換電腦版/手機版
     function initDesktopMode() {
         const viewportMeta = document.getElementById('viewportMeta');
         const btn = document.getElementById('viewToggleBtn');
@@ -496,7 +497,6 @@
 
     function toggleDesktopMode() {
         isDesktopMode = !isDesktopMode;
-        localStorage.setItem('daigou_desktop_mode', isDesktopMode);
         initDesktopMode();
     }
 
