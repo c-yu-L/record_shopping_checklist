@@ -23,7 +23,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; cursor: default; }
         body { background-color: var(--bg-color); color: var(--text-main); }
         
-        /* 確保可點擊與輸入的元素顯示正確且明顯的游標 */
         button, label, select, input[type="file"], input[type="checkbox"], input[type="radio"], .remove-btn, .category-btn {
             cursor: pointer;
         }
@@ -169,7 +168,71 @@
         }
 
         /* =========================================
-           📱 全方位適應手機介面
+           💻 強制電腦版模式樣式 (當啟用 desktop-mode 時生效)
+           ========================================= */
+        body.desktop-mode {
+            min-width: 1250px !important;
+        }
+        body.desktop-mode .container {
+            flex-direction: row !important;
+            padding: 0 20px !important;
+        }
+        body.desktop-mode .sidebar {
+            width: 160px !important;
+            display: flex !important;
+        }
+        body.desktop-mode .category-list {
+            display: block !important;
+        }
+        body.desktop-mode .category-btn {
+            display: block !important;
+            border-right: none !important;
+            padding: 15px !important;
+        }
+        body.desktop-mode .category-btn.active::after {
+            content: ''; position: absolute; right: -15px; top: -1px; bottom: -1px; width: 0; height: 0; border-top: 26px solid transparent; border-bottom: 26px solid transparent; border-left: 15px solid var(--sidebar-active); z-index: 2; display: block !important;
+        }
+        body.desktop-mode .category-btn.active::before {
+            content: ''; position: absolute; right: -17px; top: -1px; bottom: -1px; width: 0; height: 0; border-top: 26px solid transparent; border-bottom: 26px solid transparent; border-left: 16px solid #000080; z-index: 1; display: block !important;
+        }
+        body.desktop-mode .product-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+        }
+        body.desktop-mode .header-top {
+            flex-direction: row !important;
+        }
+        body.desktop-mode .header-controls {
+            flex-direction: row !important;
+            width: auto !important;
+        }
+        body.desktop-mode .search-box {
+            width: 180px !important;
+        }
+        body.desktop-mode .budget-area {
+            width: auto !important;
+        }
+        body.desktop-mode .btn-action {
+            width: auto !important;
+        }
+        body.desktop-mode .filters {
+            flex-direction: row !important;
+            width: auto !important;
+        }
+        body.desktop-mode .filters select, body.desktop-mode .price-filter {
+            width: auto !important;
+        }
+        body.desktop-mode .action-btns {
+            display: none;
+        }
+        body.desktop-mode .product-card:hover .action-btns {
+            display: flex !important;
+        }
+        body.desktop-mode .product-card {
+            padding: 15px !important;
+        }
+
+        /* =========================================
+           📱 RWD 手機版樣式 (預設)
            ========================================= */
         @media (max-width: 768px) {
             header { padding: 12px; gap: 10px; }
@@ -241,6 +304,9 @@
             <p>方便記錄和麻煩他人代買</p>
         </div>
         <div class="header-controls">
+            <!-- 新增：手動切換電腦版/手機版按鈕 -->
+            <button class="btn-action" style="background: #9b59b6;" onclick="toggleDesktopMode()" id="desktopToggleBtn">🖥️ 切換電腦版</button>
+
             <input type="text" id="searchInput" class="search-box" placeholder="搜尋商品名稱...">
             
             <div class="budget-area">
@@ -427,9 +493,18 @@
     let draggedId = null;
     let currentPreviewFreqId = null;
 
+    // 電腦版/手機版手動切換狀態初始化
+    let isDesktopMode = localStorage.getItem('daigou_desktop_mode') === 'true';
+
     function init() {
         const savedBudget = localStorage.getItem('daigou_budget');
         if (savedBudget) document.getElementById('budgetInput').value = savedBudget;
+
+        // 套用儲存的版面模式
+        if (isDesktopMode) {
+            document.body.classList.add('desktop-mode');
+            document.getElementById('desktopToggleBtn').innerText = '📱 切換手機版';
+        }
 
         renderCategories();
         updateProductView();
@@ -468,6 +543,22 @@
             }
             reader.readAsDataURL(file);
         });
+    }
+
+    // 手動切換電腦版與手機版
+    function toggleDesktopMode() {
+        isDesktopMode = !isDesktopMode;
+        localStorage.setItem('daigou_desktop_mode', isDesktopMode);
+        const btn = document.getElementById('desktopToggleBtn');
+        if (isDesktopMode) {
+            document.body.classList.add('desktop-mode');
+            btn.innerText = '📱 切換手機版';
+            showToast('已切換為電腦版排版');
+        } else {
+            document.body.classList.remove('desktop-mode');
+            btn.innerText = '🖥️ 切換電腦版';
+            showToast('已切換為手機版排版');
+        }
     }
 
     function saveData() {
