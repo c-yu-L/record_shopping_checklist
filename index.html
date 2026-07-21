@@ -277,8 +277,8 @@
         <div class="logo-area">
             <h1>
                 <span id="siteTitle" class="editable-text" contenteditable="true" onblur="saveHeaderCustom()" title="點擊即可更改標題">待購清單</span>
-                <!-- 資料共享與備份還原按鈕組 -->
-                <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #8e44ad;" onclick="copyDataLink()" title="複製保有個人資料的連結">🔗 複製個人資料連結</button>
+                <!-- 資料共享與備份還原按鈕組：放置於標題右側 -->
+                <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #8e44ad;" onclick="copyDataLink()" title="複製保有個人資料的縮短連結">🔗 複製個人資料連結</button>
                 <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #34495e;" onclick="exportJsonData()" title="將所有設定與商品打包成備份檔案下載">💾 備份資料</button>
                 <input type="file" id="importJsonFile" accept=".json" style="display:none;" onchange="importJsonData(event)">
                 <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #16a085;" onclick="document.getElementById('importJsonFile').click()" title="從備份檔案還原資料">📂 還原資料</button>
@@ -842,8 +842,8 @@
         });
     }
 
-    // 複製帶有個人資料的專屬連結
-    function copyDataLink() {
+    // 複製帶有個人資料的專屬短連結
+    async function copyDataLink() {
         const dataToShare = {
             customCategories,
             products,
@@ -854,16 +854,33 @@
         };
         const jsonStr = JSON.stringify(dataToShare);
         const encoded = btoa(encodeURIComponent(jsonStr));
-        const shareUrl = window.location.origin + window.location.pathname + '#data=' + encoded;
+        const longUrl = window.location.origin + window.location.pathname + '#data=' + encoded;
 
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(shareUrl).then(() => {
-                showToast('已複製帶有個人資料的連結！可在手機或書籤開啟使用');
-            }).catch(() => {
-                prompt('請複製以下個人資料連結：', shareUrl);
-            });
-        } else {
-            prompt('請複製以下個人資料連結：', shareUrl);
+        showToast('正在產生短連結...');
+
+        try {
+            const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`);
+            if (!response.ok) throw new Error('Network response was not ok');
+            const shortUrl = await response.text();
+
+            if (shortUrl && shortUrl.startsWith('http')) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(shortUrl);
+                    showToast('已複製個人資料短連結！可在 LINE 直接貼上開啟');
+                } else {
+                    prompt('請複製以下短連結：', shortUrl);
+                }
+            } else {
+                throw new Error('Invalid short URL');
+            }
+        } catch (err) {
+            // 若因為資料太大無法縮短，則降級複製原始長連結
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(longUrl);
+                showToast('資料量較大，已複製原始連結！');
+            } else {
+                prompt('資料量較大，請複製以下連結：', longUrl);
+            }
         }
     }
 
