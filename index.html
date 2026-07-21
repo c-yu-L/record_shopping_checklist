@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" id="viewportMeta" content="width=device-width, initial-scale=1.0">
     <title>待購清單</title>
-    <!-- 引入 html2canvas 與 html2pdf 支援 JPG, PDF 匯出及剪貼簿分享 -->
+    <!-- 引入 html2canvas 與 html2pdf 支援 JPG, PDF 匯出及分享 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -27,8 +27,21 @@
         button, label, select, input[type="file"], input[type="checkbox"], input[type="radio"], .remove-btn, .category-btn {
             cursor: pointer;
         }
-        input[type="text"], input[type="number"], .search-box {
+        input[type="text"], input[type="number"], .search-box, .editable-text {
             cursor: text;
+        }
+
+        /* 可編輯標題樣式 */
+        .editable-text {
+            display: inline-block;
+            border-bottom: 1px dashed transparent;
+            transition: all 0.2s;
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+        .editable-text:hover {
+            border-bottom: 1px dashed var(--primary-color);
+            background: rgba(74, 144, 226, 0.05);
         }
 
         /* Header */
@@ -91,7 +104,7 @@
         .btn-edit-mode { padding: 8px 15px; background: white; border: 2px solid var(--edit-color); color: var(--edit-color); border-radius: 5px; cursor: pointer; font-weight: bold; }
         .btn-edit-mode:hover { background: var(--edit-color); color: white; }
 
-        .move-toolbar { display: none; background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; align-items: center; gap: 15px; border: 1px solid #ffeeba; color: #856404; flex-wrap: wrap; }
+        .move-toolbar { display: none; background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; align-items: center; justify-content: space-between; gap: 15px; border: 1px solid #ffeeba; color: #856404; flex-wrap: wrap; }
         .move-toolbar select { padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; }
         .btn-confirm-move { padding: 6px 15px; background: var(--edit-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-cancel-move { padding: 6px 15px; background: #ddd; color: #333; border: none; border-radius: 4px; cursor: pointer; }
@@ -172,6 +185,9 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: opacity 0.3s ease;
         }
 
+        /* 桌面版與手機版的按鈕顯示控制 */
+        .desktop-only-btn { display: inline-block; }
+
         /* =========================================
            📱 手機版響應式專用排版 (當未強制切換電腦版時生效)
            ========================================= */
@@ -228,6 +244,9 @@
             
             body:not(.force-desktop) #cartModal .modal-content > div:nth-child(3) { flex-direction: column; gap: 12px; align-items: stretch !important; }
             body:not(.force-desktop) #cartModal .modal-content > div:nth-child(3) > div { justify-content: space-between; width: 100%; }
+
+            /* 手機版隱藏特定匯出按鈕 */
+            body:not(.force-desktop) .desktop-only-btn { display: none !important; }
         }
 
         @media (max-width: 360px) {
@@ -241,8 +260,8 @@
 <header>
     <div class="header-top">
         <div class="logo-area">
-            <h1>待購清單</h1>
-            <p>方便記錄和麻煩他人代買</p>
+            <h1><span id="siteTitle" class="editable-text" contenteditable="true" onblur="saveHeaderCustom()" title="點擊即可更改標題">待購清單</span></h1>
+            <p><span id="siteSubtitle" class="editable-text" contenteditable="true" onblur="saveHeaderCustom()" title="點擊即可更改網頁介紹">方便記錄和麻煩他人代買</span></p>
         </div>
         <div class="header-controls">
             <input type="text" id="searchInput" class="search-box" placeholder="搜尋商品名稱...">
@@ -285,14 +304,40 @@
                     <input type="number" id="maxPriceF" placeholder="最高價" min="0">
                 </div>
             </div>
-            <button class="btn-edit-mode" id="btnToggleEdit" onclick="toggleEditMode()">✏️ 批次移動商品</button>
+            <!-- 批次刪除與批次移動按鈕群組 -->
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button class="btn-edit-mode" id="btnToggleDelete" onclick="toggleDeleteMode()" style="border-color: #ff4757; color: #ff4757;">🗑️ 批次刪除商品</button>
+                <button class="btn-edit-mode" id="btnToggleEdit" onclick="toggleEditMode()">✏️ 批次移動商品</button>
+            </div>
         </div>
 
+        <!-- 批次移動工具列 -->
         <div class="move-toolbar" id="moveToolbar">
-            <span>已選取 <strong id="moveCount">0</strong> 項商品，請選擇移動目標：</span>
-            <select id="moveTargetCat"></select>
-            <button class="btn-confirm-move" onclick="executeMove()">確認移動</button>
-            <button class="btn-cancel-move" onclick="toggleEditMode()">取消</button>
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <span>已選取 <strong id="moveCount">0</strong> 項商品，請選擇移動目標：</span>
+                <select id="moveTargetCat"></select>
+                <button class="btn-confirm-move" onclick="executeMove()">確認移動</button>
+                <button class="btn-cancel-move" onclick="toggleEditMode()">取消</button>
+            </div>
+            <div>
+                <label style="cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="selectAllMove" onchange="toggleSelectAll(this.checked)" style="width: 18px; height: 18px; cursor: pointer;"> 頁面全選
+                </label>
+            </div>
+        </div>
+
+        <!-- 批次刪除工具列 -->
+        <div class="move-toolbar" id="deleteToolbar" style="background: #ffe5e5; border-color: #ffcccc; color: #c0392b;">
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <span>已選取 <strong id="deleteCount">0</strong> 項商品，確定要永久刪除選中的商品嗎？</span>
+                <button class="btn-confirm-move" style="background: #ff4757;" onclick="executeBatchDelete()">確認刪除</button>
+                <button class="btn-cancel-move" onclick="toggleDeleteMode()">取消</button>
+            </div>
+            <div>
+                <label style="cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="selectAllDelete" onchange="toggleSelectAll(this.checked)" style="width: 18px; height: 18px; cursor: pointer;"> 頁面全選
+                </label>
+            </div>
         </div>
 
         <div class="product-grid" id="productGrid"></div>
@@ -349,9 +394,10 @@
 <div class="modal-overlay" id="cartModal">
     <div class="modal-content">
         <span class="modal-close" onclick="closeModal('cartModal')">&times;</span>
-        <h2>待購清單確認</h2>
+        <h2 id="cartModalTitle">待購清單確認</h2>
         <p style="margin-bottom: 10px; color: #777; font-size: 13px;">確認無誤後點擊匯出。表格可左右滑動查看。</p>
         
+        <!-- 上方控制列（左側功能，右側總金額） -->
         <div style="display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <button class="btn-action" style="background: var(--edit-color);" onclick="saveAsFrequentList()">⭐ 設為常買</button>
@@ -363,15 +409,12 @@
             
             <div style="display:flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <div style="font-weight:bold; font-size:16px;">總金額：<span id="cartTotalDisplay">$0</span></div>
-                <button class="btn-action" style="background: #ff4757;" onclick="exportToImage()">匯出 JPG</button>
-                <button class="btn-action" style="background: #27ae60;" onclick="shareToClipboard()">📤 一鍵分享</button>
-                <button class="btn-action" style="background: #8e44ad;" onclick="exportToPDF()">匯出 PDF</button>
             </div>
         </div>
 
         <div class="table-wrapper">
             <div id="export-area">
-                <h1 class="export-header">待購清單</h1>
+                <h1 class="export-header" id="exportHeaderTitle">待購清單</h1>
                 <table class="export-table" id="exportTable">
                     <thead>
                         <tr>
@@ -391,6 +434,14 @@
                 </table>
                 <div class="export-footer" id="exportDate"></div>
             </div>
+        </div>
+
+        <!-- 表格下方按鈕列（依序為：一鍵複製、其他分享、匯出 JPG、匯出 PDF） -->
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+            <button class="btn-action desktop-only-btn" style="background: #ff4757;" onclick="shareToClipboard()">📋 一鍵複製</button>
+            <button class="btn-action" style="background: #27ae60;" onclick="shareToNative()">📤 其他分享</button>
+            <button class="btn-action desktop-only-btn" style="background: #e67e22;" onclick="exportToImage()">🖼️ 匯出 JPG</button>
+            <button class="btn-action desktop-only-btn" style="background: #8e44ad;" onclick="exportToPDF()">📄 匯出 PDF</button>
         </div>
     </div>
 </div>
@@ -426,21 +477,27 @@
     
     let currentCategory = '所有';
     let tempImageBase64 = fallbackImage;
-    let isEditMode = false;
-    let selectedForMove = new Set();
+    let isEditMode = false;     // 批次移動模式
+    let isDeleteMode = false;   // 批次刪除模式
+    let selectedForBatch = new Set(); // 共用選取集合
     let editingProductId = null;
     let draggedItemType = null;
     let draggedId = null;
     let currentPreviewFreqId = null;
 
-    // 檢查是否為桌面捷徑（Standalone 模式），若不是則每次開啟連結皆預設為手機原始設定
-    let isStandaloneShortcut = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    let isDesktopMode = isStandaloneShortcut; 
+    let isDesktopMode = false; // 預設每次打開連結皆重回原始手機版設定
 
     function init() {
         const savedBudget = localStorage.getItem('daigou_budget');
         if (savedBudget) document.getElementById('budgetInput').value = savedBudget;
 
+        // 載入自訂標題與介紹
+        const savedTitle = localStorage.getItem('daigou_custom_title');
+        const savedSubtitle = localStorage.getItem('daigou_custom_subtitle');
+        if (savedTitle) document.getElementById('siteTitle').innerText = savedTitle;
+        if (savedSubtitle) document.getElementById('siteSubtitle').innerText = savedSubtitle;
+
+        updateCartModalTitle();
         initDesktopMode();
         renderCategories();
         updateProductView();
@@ -479,6 +536,37 @@
             }
             reader.readAsDataURL(file);
         });
+    }
+
+    // 更新檢視確認視窗內的標題
+    function updateCartModalTitle() {
+        const titleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+        document.getElementById('cartModalTitle').innerText = `${titleText}確認`;
+    }
+
+    // 儲存自訂標題與介紹
+    function saveHeaderCustom() {
+        let titleEl = document.getElementById('siteTitle');
+        let subtitleEl = document.getElementById('siteSubtitle');
+        
+        let titleVal = titleEl.innerText.trim();
+        let subtitleVal = subtitleEl.innerText.trim();
+
+        if (titleVal === '' || titleVal === '待購清單') {
+            localStorage.removeItem('daigou_custom_title');
+            titleEl.innerText = '待購清單';
+        } else {
+            localStorage.setItem('daigou_custom_title', titleVal);
+        }
+
+        if (subtitleVal === '' || subtitleVal === '方便記錄和麻煩他人代買') {
+            localStorage.removeItem('daigou_custom_subtitle');
+            subtitleEl.innerText = '方便記錄和麻煩他人代買';
+        } else {
+            localStorage.setItem('daigou_custom_subtitle', subtitleVal);
+        }
+
+        updateCartModalTitle();
     }
 
     function initDesktopMode() {
@@ -586,7 +674,10 @@
     }
 
     function changeCategory(cat) {
-        if (isEditMode) toggleEditMode();
+        if (isEditMode || isDeleteMode) {
+            if (isEditMode) toggleEditMode();
+            if (isDeleteMode) toggleDeleteMode();
+        }
         currentCategory = cat; 
         renderCategories();
         document.getElementById('brandFilter').value = '';
@@ -810,28 +901,131 @@
         }
     }
 
+    // 取得當前畫面顯示中的所有商品清單
+    function getCurrentVisibleProductIds() {
+        const keyword = document.getElementById('searchInput').value.trim();
+        const brandF = document.getElementById('brandFilter').value;
+        const capF = document.getElementById('capacityFilter').value;
+        const minP = document.getElementById('minPriceF').value;
+        const maxP = document.getElementById('maxPriceF').value;
+
+        let filtered = products.filter(p => {
+            let matchCat = (currentCategory === '所有') ? true : (p.category === currentCategory);
+            let matchKey = p.name.includes(keyword) || (p.brand && p.brand.includes(keyword)) || (p.customValue && p.customValue.includes(keyword));
+            let matchBrand = brandF === '' || p.brand === brandF;
+            let matchCap = capF === '' || p.capacity === capF;
+            let matchPrice = true;
+            
+            if (minP || maxP) {
+                const prodPrice = parseInt(p.price);
+                if (isNaN(prodPrice)) matchPrice = false;
+                else {
+                    if (minP && prodPrice < parseInt(minP)) matchPrice = false;
+                    if (maxP && prodPrice > parseInt(maxP)) matchPrice = false;
+                }
+            }
+
+            if (keyword.length > 0) return matchKey; 
+            return matchCat && matchBrand && matchCap && matchPrice;
+        });
+
+        return filtered.map(p => p.id);
+    }
+
+    // 頁面全選切換
+    function toggleSelectAll(isChecked) {
+        const visibleIds = getCurrentVisibleProductIds();
+        if (isChecked) {
+            visibleIds.forEach(id => selectedForBatch.add(id));
+        } else {
+            visibleIds.forEach(id => selectedForBatch.delete(id));
+        }
+        document.getElementById('moveCount').innerText = selectedForBatch.size;
+        document.getElementById('deleteCount').innerText = selectedForBatch.size;
+        updateProductView();
+    }
+
+    // 批次移動模式切換
     function toggleEditMode() {
-        isEditMode = !isEditMode; selectedForMove.clear(); document.getElementById('moveCount').innerText = 0;
+        if (isDeleteMode) toggleDeleteMode(); // 關閉刪除模式
+        isEditMode = !isEditMode; 
+        selectedForBatch.clear(); 
+        document.getElementById('moveCount').innerText = 0;
+        document.getElementById('selectAllMove').checked = false;
+        
         const btnToggle = document.getElementById('btnToggleEdit');
         const moveToolbar = document.getElementById('moveToolbar');
         if (isEditMode) {
-            btnToggle.innerText = '取消編輯'; btnToggle.style.background = 'var(--edit-color)'; btnToggle.style.color = 'white';
+            btnToggle.innerText = '取消移動'; 
+            btnToggle.style.background = 'var(--edit-color)'; 
+            btnToggle.style.color = 'white';
             moveToolbar.style.display = 'flex';
             document.getElementById('moveTargetCat').innerHTML = ['未分類', ...customCategories].map(c => `<option value="${c}">${c}</option>`).join('');
         } else {
-            btnToggle.innerText = '✏️ 批次移動商品'; btnToggle.style.background = 'white'; btnToggle.style.color = 'var(--edit-color)';
+            btnToggle.innerText = '✏️ 批次移動商品'; 
+            btnToggle.style.background = 'white'; 
+            btnToggle.style.color = 'var(--edit-color)';
             moveToolbar.style.display = 'none';
         }
         updateProductView();
     }
-    function toggleMoveSelect(id, isChecked) { if (isChecked) selectedForMove.add(id); else selectedForMove.delete(id); document.getElementById('moveCount').innerText = selectedForMove.size; }
+
+    // 批次刪除模式切換
+    function toggleDeleteMode() {
+        if (isEditMode) toggleEditMode(); // 關閉移動模式
+        isDeleteMode = !isDeleteMode; 
+        selectedForBatch.clear(); 
+        document.getElementById('deleteCount').innerText = 0;
+        document.getElementById('selectAllDelete').checked = false;
+        
+        const btnToggle = document.getElementById('btnToggleDelete');
+        const deleteToolbar = document.getElementById('deleteToolbar');
+        if (isDeleteMode) {
+            btnToggle.innerText = '取消刪除'; 
+            btnToggle.style.background = '#ff4757'; 
+            btnToggle.style.color = 'white';
+            deleteToolbar.style.display = 'flex';
+        } else {
+            btnToggle.innerText = '🗑️ 批次刪除商品'; 
+            btnToggle.style.background = 'white'; 
+            btnToggle.style.color = '#ff4757';
+            deleteToolbar.style.display = 'none';
+        }
+        updateProductView();
+    }
+
+    function toggleBatchSelect(id, isChecked) { 
+        if (isChecked) selectedForBatch.add(id); 
+        else selectedForBatch.delete(id); 
+        
+        document.getElementById('moveCount').innerText = selectedForBatch.size;
+        document.getElementById('deleteCount').innerText = selectedForBatch.size;
+
+        // 檢查是否所有可見商品皆已被選取，若是則勾選「頁面全選」框
+        const visibleIds = getCurrentVisibleProductIds();
+        const allChecked = visibleIds.length > 0 && visibleIds.every(vid => selectedForBatch.has(vid));
+        document.getElementById('selectAllMove').checked = allChecked;
+        document.getElementById('selectAllDelete').checked = allChecked;
+    }
+
     function executeMove() {
-        if (selectedForMove.size === 0) { alert('請先勾選商品！'); return; }
+        if (selectedForBatch.size === 0) { alert('請先勾選商品！'); return; }
         const targetCat = document.getElementById('moveTargetCat').value;
-        products.forEach(p => { if (selectedForMove.has(p.id)) p.category = targetCat; });
+        products.forEach(p => { if (selectedForBatch.has(p.id)) p.category = targetCat; });
         triggerUpdate(); 
         alert('移動成功！'); 
         toggleEditMode();
+    }
+
+    function executeBatchDelete() {
+        if (selectedForBatch.size === 0) { alert('請先勾選商品！'); return; }
+        if (confirm(`確定要永久刪除選取的 ${selectedForBatch.size} 項商品嗎？`)) {
+            products = products.filter(p => !selectedForBatch.has(p.id));
+            selectedForBatch.forEach(id => delete cart[id]);
+            triggerUpdate();
+            alert('批次刪除成功！');
+            toggleDeleteMode();
+        }
     }
 
     function updateBrandSuggestions() {
@@ -841,6 +1035,7 @@
 
     function openAddProductModal() {
         if (isEditMode) toggleEditMode();
+        if (isDeleteMode) toggleDeleteMode();
         editingProductId = null;
         document.getElementById('productModalTitle').innerText = '新增商品';
         updateBrandSuggestions();
@@ -859,6 +1054,7 @@
 
     function openEditProductModal(id) {
         if (isEditMode) toggleEditMode();
+        if (isDeleteMode) toggleDeleteMode();
         const p = products.find(x => x.id === id);
         if(!p) return;
         
@@ -913,7 +1109,7 @@
         if(confirm('確定要永久刪除這個商品嗎？')) {
             products = products.filter(p => p.id !== id);
             delete cart[id];
-            selectedForMove.delete(id);
+            selectedForBatch.delete(id);
             triggerUpdate();
             if (document.getElementById('cartModal').style.display === 'flex') {
                 renderCartTable();
@@ -961,14 +1157,19 @@
         grid.innerHTML = filtered.map(p => {
             const qtyVal = cart[p.id] || 1;
             
-            let actionHtml = isEditMode 
-                ? `<label class="check-container edit-mode-check"><input type="checkbox" ${selectedForMove.has(p.id) ? 'checked' : ''} onchange="toggleMoveSelect(${p.id}, this.checked)"> 選取移動</label>`
-                : `<div class="cart-action">
+            let actionHtml = '';
+            if (isEditMode) {
+                actionHtml = `<label class="check-container edit-mode-check"><input type="checkbox" ${selectedForBatch.has(p.id) ? 'checked' : ''} onchange="toggleBatchSelect(${p.id}, this.checked)"> 選取移動</label>`;
+            } else if (isDeleteMode) {
+                actionHtml = `<label class="check-container edit-mode-check" style="color:#ff4757; border-color:#ff4757;"><input type="checkbox" ${selectedForBatch.has(p.id) ? 'checked' : ''} onchange="toggleBatchSelect(${p.id}, this.checked)"> 選取刪除</label>`;
+            } else {
+                actionHtml = `<div class="cart-action">
                     <input type="number" id="qty_${p.id}" class="qty-input" min="1" max="100" value="${qtyVal}" onchange="updateQtyLimit(this); updateHomeQty(${p.id}, this.value)">
                     <label class="check-container">
                         <input type="checkbox" ${cart[p.id] ? 'checked' : ''} onchange="toggleCart(${p.id}, this.checked)"> 加入清單
                     </label>
                    </div>`;
+            }
 
             const categoryBadge = (currentCategory === '所有') ? `<div style="position:absolute; top:10px; left:10px; background:var(--primary-color); color:white; font-size:11px; padding:2px 8px; border-radius:10px;">${p.category}</div>` : '';
             
@@ -977,7 +1178,12 @@
             const customHtml = p.customTitle && p.customValue ? `<div class="product-meta">${p.customTitle}: ${p.customValue}</div>` : '';
             const priceHtml = p.price ? `<div class="product-price">單價: $${p.price}</div>` : '';
             
-            const draggableAttrs = !isEditMode ? `draggable="true" ondragstart="dragStart(event, 'prod', ${p.id})" ondragover="allowDrop(event)" ondrop="drop(event, 'prod', ${p.id})" ondragend="dragEnd(event)"` : '';
+            const draggableAttrs = (!isEditMode && !isDeleteMode) ? `draggable="true" ondragstart="dragStart(event, 'prod', ${p.id})" ondragover="allowDrop(event)" ondrop="drop(event, 'prod', ${p.id})" ondragend="dragEnd(event)"` : '';
+
+            let borderStyle = '';
+            if ((isEditMode || isDeleteMode) && selectedForBatch.has(p.id)) {
+                borderStyle = `style="border: 2px solid ${isDeleteMode ? '#ff4757' : 'var(--edit-color)'};"`;
+            }
 
             let freqDropdownHtml = `
                 <div id="freq_dropdown_${p.id}" style="display:none; position:absolute; top:35px; right:5px; background:white; border:1px solid #ccc; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; padding:6px; min-width:140px; text-align:left;" onclick="event.stopPropagation()">
@@ -992,7 +1198,7 @@
             `;
 
             return `
-                <div class="product-card" ${draggableAttrs} ${isEditMode && selectedForMove.has(p.id) ? 'style="border: 2px solid var(--edit-color);"' : ''}>
+                <div class="product-card" ${draggableAttrs} ${borderStyle}>
                     ${categoryBadge}
                     <div class="action-btns">
                         <div style="position:relative;">
@@ -1063,6 +1269,8 @@
 
     function openCartModal() {
         if (isEditMode) toggleEditMode();
+        if (isDeleteMode) toggleDeleteMode();
+        updateCartModalTitle();
         document.getElementById('cartModal').style.display = 'flex';
         togglePriceExport(); 
         renderCartTable();
@@ -1135,7 +1343,11 @@
         const area = document.getElementById('export-area');
         
         area.classList.add('exporting');
-        document.querySelector('.export-header').style.display = 'block';
+        
+        const currentTitleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+        const exportHeaderEl = document.getElementById('exportHeaderTitle');
+        exportHeaderEl.innerText = currentTitleText;
+        exportHeaderEl.style.display = 'block';
         
         let total = 0;
         products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
@@ -1153,11 +1365,11 @@
 
         html2canvas(area, { scale: 3, useCORS: true }).then(canvas => {
             const link = document.createElement('a');
-            link.download = '待購清單.jpg';
+            link.download = `${currentTitleText}.jpg`;
             link.href = canvas.toDataURL('image/jpeg', 0.95);
             link.click();
 
-            document.querySelector('.export-header').style.display = 'none';
+            exportHeaderEl.style.display = 'none';
             document.getElementById('exportDate').style.display = 'none';
             actions.forEach(el => el.style.display = ''); 
             area.style.border = "none";
@@ -1166,11 +1378,15 @@
     }
 
     function shareToClipboard() {
-        if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法分享喔！'); return; }
+        if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法複製喔！'); return; }
         const area = document.getElementById('export-area');
         
         area.classList.add('exporting');
-        document.querySelector('.export-header').style.display = 'block';
+        
+        const currentTitleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+        const exportHeaderEl = document.getElementById('exportHeaderTitle');
+        exportHeaderEl.innerText = currentTitleText;
+        exportHeaderEl.style.display = 'block';
         
         let total = 0;
         products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
@@ -1200,7 +1416,7 @@
                     alert('您的瀏覽器不支援直接複製圖片，請使用匯出 JPG 功能。');
                 }
 
-                document.querySelector('.export-header').style.display = 'none';
+                exportHeaderEl.style.display = 'none';
                 document.getElementById('exportDate').style.display = 'none';
                 actions.forEach(el => el.style.display = ''); 
                 area.style.border = "none";
@@ -1209,12 +1425,68 @@
         });
     }
 
+    function shareToNative() {
+        if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法分享喔！'); return; }
+        const area = document.getElementById('export-area');
+        
+        area.classList.add('exporting');
+        
+        const currentTitleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+        const exportHeaderEl = document.getElementById('exportHeaderTitle');
+        exportHeaderEl.innerText = currentTitleText;
+        exportHeaderEl.style.display = 'block';
+        
+        let total = 0;
+        products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
+        
+        const dateHtml = `
+            <div class="export-total-line">預估總金額：$${total}</div>
+            <div>匯出日期: ${new Date().toLocaleDateString('zh-TW')}</div>
+        `;
+        document.getElementById('exportDate').innerHTML = dateHtml;
+        document.getElementById('exportDate').style.display = 'block';
+        
+        const actions = document.querySelectorAll('.action-col');
+        actions.forEach(el => el.style.display = 'none'); 
+        area.style.border = "1px solid #ccc"; 
+
+        html2canvas(area, { scale: 3, useCORS: true }).then(canvas => {
+            canvas.toBlob(blob => {
+                const file = new File([blob], `${currentTitleText}.jpg`, { type: 'image/jpeg' });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                        files: [file],
+                        title: currentTitleText,
+                        text: '分享我的待購清單'
+                    }).then(() => {
+                        showToast('已開啟分享面板！');
+                    }).catch(err => {
+                        if (err.name !== 'AbortError') console.log(err);
+                    });
+                } else {
+                    alert('您的裝置或瀏覽器不支援直接分享圖片，請使用電腦版進行操作。');
+                }
+
+                exportHeaderEl.style.display = 'none';
+                document.getElementById('exportDate').style.display = 'none';
+                actions.forEach(el => el.style.display = ''); 
+                area.style.border = "none";
+                area.classList.remove('exporting');
+            }, 'image/jpeg', 0.95);
+        });
+    }
+
     function exportToPDF() {
         if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法匯出喔！'); return; }
         const area = document.getElementById('export-area');
         
         area.classList.add('exporting');
-        document.querySelector('.export-header').style.display = 'block';
+        
+        const currentTitleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+        const exportHeaderEl = document.getElementById('exportHeaderTitle');
+        exportHeaderEl.innerText = currentTitleText;
+        exportHeaderEl.style.display = 'block';
         
         let total = 0;
         products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
@@ -1232,14 +1504,14 @@
 
         const opt = {
             margin:       10,
-            filename:     '待購清單.pdf',
+            filename:     `${currentTitleText}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 3, useCORS: true },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
         html2pdf().from(area).set(opt).save().then(() => {
-            document.querySelector('.export-header').style.display = 'none';
+            exportHeaderEl.style.display = 'none';
             document.getElementById('exportDate').style.display = 'none';
             actions.forEach(el => el.style.display = ''); 
             area.style.border = "none";
