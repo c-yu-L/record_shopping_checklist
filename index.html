@@ -79,7 +79,24 @@
 
         /* Sidebar & Layout */
         .container { display: flex; max-width: 1400px; margin: 20px auto; padding: 0 20px; gap: 20px; }
-        .sidebar { width: 160px; flex-shrink: 0; background: white; height: fit-content; display: flex; flex-direction: column; }
+        
+        /* 左側分類：不跟隨滾動 (獨立滾動) */
+        .sidebar { 
+            width: 160px; 
+            flex-shrink: 0; 
+            background: white; 
+            display: flex; 
+            flex-direction: column; 
+            align-self: flex-start;
+            position: sticky;
+            top: 150px; /* 預設值，由 JS 動態更新以防重疊 */
+            max-height: 80vh; /* 預設值，由 JS 動態更新 */
+            overflow-y: auto;
+        }
+        /* 隱藏滾動條但保留功能 */
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
         .category-list { border: 1px solid #000080; border-bottom: none; }
         .category-item { position: relative; }
         .category-item.dragging { opacity: 0.4; background: #eee; }
@@ -116,12 +133,6 @@
         /* Product Grid */
         .product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
         @media(max-width: 1024px) { .product-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media(max-width: 768px) { 
-            body:not(.force-desktop) .product-grid { grid-template-columns: repeat(2, 1fr); } 
-        }
-        @media(max-width: 480px) { 
-            body:not(.force-desktop) .product-grid { grid-template-columns: repeat(1, 1fr); } 
-        }
 
         .product-card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 15px; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: transform 0.2s; cursor: default; }
         .product-card.dragging { opacity: 0.4; transform: scale(0.95); }
@@ -209,71 +220,137 @@
 
         /* 桌面版與手機版的按鈕顯示控制 */
         .desktop-only-btn { display: inline-block; }
+        .mobile-collapse-bar { display: none; }
 
         /* =========================================
-           📱 手機版響應式專用排版 (當未強制切換電腦版時生效)
+           📱 手機版響應式專用排版 (依指定順序切齊擺放)
            ========================================= */
         @media (max-width: 768px) {
-            body:not(.force-desktop) header { padding: 12px; gap: 10px; }
-            body:not(.force-desktop) .header-top { flex-direction: column; align-items: stretch; gap: 10px; }
+            body:not(.force-desktop) header { padding: 12px; gap: 8px; }
             
-            body:not(.force-desktop) .logo-area h1 { font-size: 22px; }
-            body:not(.force-desktop) .logo-area p { font-size: 11px; }
+            /* 將 header-top 設定為 2 欄的 Grid 網格系統以完美切齊 */
+            body:not(.force-desktop) .header-top {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                align-items: center;
+                width: 100%;
+            }
+            
+            /* 讓子容器內容成為網格的直接元素 */
+            body:not(.force-desktop) .logo-area,
+            body:not(.force-desktop) .logo-area h1,
+            body:not(.force-desktop) .header-controls {
+                display: contents !important;
+            }
 
-            body:not(.force-desktop) .search-box { width: 100%; padding: 12px 15px; font-size: 16px; border-radius: 25px; }
-            body:not(.force-desktop) .header-controls { width: 100%; flex-direction: column; align-items: stretch; gap: 10px; }
+            /* --- 手機版排列順序與對齊 --- */
             
-            body:not(.force-desktop) .budget-area { width: 100%; justify-content: space-between; padding: 10px 15px; font-size: 15px; }
-            body:not(.force-desktop) .budget-area input { width: 90px; text-align: center; font-size: 16px; }
+            /* 第 1 列: 網頁名稱 | 切換電腦版 */
+            body:not(.force-desktop) #siteTitle { grid-column: 1 / 2; grid-row: 1; font-size: 20px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            body:not(.force-desktop) #viewToggleBtn { grid-column: 2 / 3; grid-row: 1; width: 100% !important; padding: 10px 0 !important; font-size: 13px !important; border-radius: 20px !important; text-align: center; margin: 0 !important;}
             
-            body:not(.force-desktop) .btn-action { width: 100%; padding: 14px; font-size: 16px; border-radius: 25px; text-align: center; }
+            /* 第 2 列: 複製連結 | 一鍵預設 */
+            body:not(.force-desktop) .btn-copy-link { grid-column: 1 / 2; grid-row: 2; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block !important; }
+            body:not(.force-desktop) .btn-reset-default { grid-column: 2 / 3; grid-row: 2; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block !important; }
             
-            body:not(.force-desktop) .freq-bar { flex-direction: column; align-items: stretch; gap: 8px; }
-            body:not(.force-desktop) .freq-bar div { display: flex; flex-wrap: wrap; gap: 6px !important; }
-            body:not(.force-desktop) .btn-freq { padding: 6px 12px; font-size: 12px; }
+            /* 第 3 列: 備份資料 | 還原資料 */
+            body:not(.force-desktop) .btn-backup { grid-column: 1 / 2; grid-row: 3; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block !important; }
+            body:not(.force-desktop) .btn-restore { grid-column: 2 / 3; grid-row: 3; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block !important; }
+            
+            /* 第 4 列: 搜尋商品名稱 (全寬) */
+            body:not(.force-desktop) #searchInput { grid-column: 1 / 3; grid-row: 4; width: 100% !important; padding: 12px 15px !important; border-radius: 25px !important; box-sizing: border-box; margin: 0 !important; }
+            
+            /* 第 5 列: 預算 (全寬) */
+            body:not(.force-desktop) .budget-area { grid-column: 1 / 3; grid-row: 5; width: 100% !important; justify-content: space-between !important; padding: 10px 15px !important; box-sizing: border-box; margin: 0 !important; }
+            body:not(.force-desktop) .budget-area input { width: 90px !important; text-align: center; }
+            
+            /* 第 6 列: 新增商品 | 檢視/匯出 */
+            body:not(.force-desktop) .btn-add { grid-column: 1 / 2; grid-row: 6; width: 100% !important; padding: 12px 0 !important; font-size: 14px !important; border-radius: 25px !important; text-align: center; margin: 0 !important; }
+            body:not(.force-desktop) .btn-cart-modal { grid-column: 2 / 3; grid-row: 6; width: 100% !important; padding: 12px 0 !important; font-size: 14px !important; border-radius: 25px !important; text-align: center; margin: 0 !important; }
 
-            body:not(.force-desktop) .container { flex-direction: column; padding: 0 8px; gap: 12px; margin-top: 10px; }
+            /* 隱藏不需要的元素 */
+            body:not(.force-desktop) .logo-area p,
+            body:not(.force-desktop) .btn-bulk,
+            body:not(.force-desktop) .desktop-only-element:not(.btn-copy-link):not(.btn-reset-default):not(.btn-backup):not(.btn-restore) {
+                display: none !important;
+            }
+
+            /* 手機版折疊開關 (預設顯示) */
+            body:not(.force-desktop) .mobile-collapse-bar {
+                display: block;
+                text-align: center;
+                background: #eef2f5;
+                color: var(--primary-color);
+                padding: 8px;
+                border-radius: 10px;
+                font-size: 12px;
+                font-weight: bold;
+                cursor: pointer;
+                margin-top: 5px;
+            }
+
+            /* 當 header 被折疊時，隱藏 header-top 內容 */
+            body:not(.force-desktop) header.collapsed .header-top {
+                display: none !important;
+            }
+
+            /* 手機版：左側獨立滾動導覽列與雙欄商品網格 */
+            body:not(.force-desktop) .container { flex-direction: row; align-items: flex-start; padding: 0 5px; gap: 8px; margin-top: 10px; }
             
-            body:not(.force-desktop) .sidebar { width: 100%; }
-            body:not(.force-desktop) .category-list { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #000080; border-bottom: none; border-right: none; }
-            body:not(.force-desktop) .category-btn { border-right: 1px solid #000080; padding: 14px 10px; font-size: 16px; }
+            body:not(.force-desktop) .sidebar { 
+                width: 90px; 
+                flex-shrink: 0; 
+            }
+            
+            /* 針對手機版批次刪除與全部刪除分類按鈕變成垂直排列 */
+            body:not(.force-desktop) .sidebar > div:first-child { flex-direction: column !important; }
+            body:not(.force-desktop) .sidebar > div:first-child button { border-right: none !important; border-bottom: 1px solid #fff; padding: 8px 2px !important; font-size: 11px !important; }
+            
+            body:not(.force-desktop) .category-list { display: flex; flex-direction: column; border: 1px solid #000080; border-bottom: none; }
+            body:not(.force-desktop) .category-btn { padding: 12px 4px; font-size: 14px; border-right: none; }
             body:not(.force-desktop) .category-btn.active::after, body:not(.force-desktop) .category-btn.active::before { display: none; }
+            body:not(.force-desktop) .del-cat-btn { display: block; position: absolute; right: 2px; top: 2px; background: rgba(255, 255, 255, 0.9); border-radius: 50%; width: 20px; height: 20px; font-size: 10px; line-height: 20px; text-align: center; }
             
-            body:not(.force-desktop) .del-cat-btn { display: block; position: absolute; right: 4px; top: 4px; background: rgba(255, 255, 255, 0.9); border-radius: 50%; width: 24px; height: 24px; font-size: 12px; line-height: 24px; text-align: center; }
-            
-            body:not(.force-desktop) .add-category-box { display: flex; flex-direction: row; }
-            body:not(.force-desktop) .add-category-box input { flex-grow: 1; margin-bottom: 0; padding: 12px; font-size: 15px; }
-            body:not(.force-desktop) .add-category-box button { width: auto; padding: 12px 18px; font-size: 15px; }
+            body:not(.force-desktop) .add-category-box { display: flex; flex-direction: column; padding: 6px; }
+            body:not(.force-desktop) .add-category-box input { width: 100%; padding: 6px 4px; font-size: 12px; margin-bottom: 5px; }
+            body:not(.force-desktop) .add-category-box button { width: 100%; padding: 6px 4px; font-size: 12px; }
             
             body:not(.force-desktop) .content-header { flex-direction: column; align-items: stretch; gap: 10px; }
             body:not(.force-desktop) .filters { display: flex; flex-direction: column; width: 100%; gap: 8px; }
             body:not(.force-desktop) .filters select { width: 100%; padding: 12px; font-size: 15px; }
-            
             body:not(.force-desktop) .price-filter { width: 100%; justify-content: space-between; padding: 10px 12px; }
             body:not(.force-desktop) .price-filter input { width: 42%; padding: 8px; font-size: 15px; }
-            
             body:not(.force-desktop) .btn-edit-mode { width: 100%; text-align: center; padding: 12px; font-size: 15px; }
-            
             body:not(.force-desktop) .move-toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
             body:not(.force-desktop) .move-toolbar select { width: 100%; padding: 10px; }
-
+            
+            /* 強制手機版為雙欄商品排版 */
+            body:not(.force-desktop) .product-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+            body:not(.force-desktop) .product-card { padding: 35px 8px 10px 8px; }
+            body:not(.force-desktop) .product-image { height: 100px; margin-bottom: 10px; }
+            body:not(.force-desktop) .product-title { font-size: 14px; }
+            body:not(.force-desktop) .product-meta { font-size: 11px; }
+            body:not(.force-desktop) .product-price { font-size: 13px; }
+            body:not(.force-desktop) .qty-input { width: 40px; padding: 4px; }
+            body:not(.force-desktop) .check-container { font-size: 12px; }
+            body:not(.force-desktop) .cart-action { gap: 5px; }
+            body:not(.force-desktop) .btn-add-freq, body:not(.force-desktop) .btn-edit-prod, body:not(.force-desktop) .btn-del-prod { width: 22px; height: 22px; font-size: 10px; }
             body:not(.force-desktop) .action-btns { display: flex; }
-            body:not(.force-desktop) .product-card { padding: 40px 10px 15px 10px; }
-            body:not(.force-desktop) .product-image { height: 130px; }
             
             body:not(.force-desktop) .modal-content { width: 96%; padding: 20px 12px; max-height: 88vh; }
             body:not(.force-desktop) .modal-close { top: 12px; right: 15px; font-size: 32px; }
-            
             body:not(.force-desktop) #cartModal .modal-content > div:nth-child(3) { flex-direction: column; gap: 12px; align-items: stretch !important; }
             body:not(.force-desktop) #cartModal .modal-content > div:nth-child(3) > div { justify-content: space-between; width: 100%; }
-
-            /* 手機版隱藏特定匯出按鈕 */
-            body:not(.force-desktop) .desktop-only-btn { display: none !important; }
         }
 
         @media (max-width: 360px) {
-            .product-grid { grid-template-columns: 1fr; }
-            .filters select { font-size: 14px; }
+            body:not(.force-desktop) .product-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            body:not(.force-desktop) .sidebar { width: 75px; }
+            body:not(.force-desktop) .category-btn { font-size: 12px; padding: 8px 2px; }
+            body:not(.force-desktop) .product-card { padding: 30px 4px 8px 4px; }
+            body:not(.force-desktop) .product-image { height: 75px; }
+            .filters select { font-size: 13px; }
         }
     </style>
 </head>
@@ -285,11 +362,11 @@
             <h1>
                 <span id="siteTitle" class="editable-text" contenteditable="true" onblur="saveHeaderCustom()" title="點擊即可更改標題">待購清單</span>
                 <!-- 資料共享與備份還原及一鍵預設按鈕組 -->
-                <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #8e44ad;" onclick="copyDataLink()" title="複製保有個人資料的連結">🔗 複製個人資料連結</button>
-                <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #34495e;" onclick="exportJsonData()" title="將所有設定與商品打包成備份檔案下載">💾 備份資料</button>
+                <button class="btn-action desktop-only-element btn-copy-link" style="padding: 2px 8px; font-size: 12px; font-weight: normal; border-radius: 12px; vertical-align: middle; background-color: #8e44ad;" onclick="copyDataLink()" title="複製保有個人資料的連結">🔗 複製個人資料連結</button>
+                <button class="btn-action desktop-only-element btn-reset-default" style="padding: 2px 8px; font-size: 12px; font-weight: normal; border-radius: 12px; vertical-align: middle; background-color: #c0392b;" onclick="resetToDefaultPage()" title="恢復為預設網頁（清除所有新增與自訂內容）">🔄 一鍵預設</button>
+                <button class="btn-action desktop-only-element btn-backup" style="padding: 2px 8px; font-size: 12px; font-weight: normal; border-radius: 12px; vertical-align: middle; background-color: #34495e;" onclick="exportJsonData()" title="將所有設定與商品打包成備份檔案下載">💾 備份資料</button>
                 <input type="file" id="importJsonFile" accept=".json" style="display:none;" onchange="importJsonData(event)">
-                <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #16a085;" onclick="document.getElementById('importJsonFile').click()" title="從備份檔案還原資料">📂 還原資料</button>
-                <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #c0392b;" onclick="resetToDefaultPage()" title="恢復為預設網頁（清除所有新增與自訂內容）">🔄 一鍵預設</button>
+                <button class="btn-action desktop-only-element btn-restore" style="padding: 2px 8px; font-size: 12px; font-weight: normal; border-radius: 12px; vertical-align: middle; background-color: #16a085;" onclick="document.getElementById('importJsonFile').click()" title="從備份檔案還原資料">📂 還原資料</button>
             </h1>
             <p><span id="siteSubtitle" class="editable-text" contenteditable="true" onblur="saveHeaderCustom()" title="點擊即可更改網頁介紹">方便記錄和麻煩他人代買</span></p>
         </div>
@@ -302,17 +379,25 @@
 
             <button class="btn-action btn-add" onclick="openAddProductModal()">+ 新增商品</button>
             <button class="btn-action btn-bulk" onclick="openBulkModal()">+ 大量新增</button>
-            <button class="btn-action" onclick="openCartModal()">🛒 檢視 / 匯出 (<span id="cartCount">0</span>)</button>
+            <button class="btn-action btn-cart-modal" onclick="openCartModal()">🛒 檢視 / 匯出 (<span id="cartCount">0</span>)</button>
+            
             <!-- 一鍵切換電腦版按鈕 -->
             <button class="btn-action" id="viewToggleBtn" style="background: #6c757d;" onclick="toggleDesktopMode()">💻 切換電腦版</button>
         </div>
     </div>
+    
+    <!-- 手機版向上合起來切換列 -->
+    <div class="mobile-collapse-bar" id="mobileCollapseBar" onclick="toggleMobileHeader()">
+        <span id="mobileCollapseText">▲ 收起上方選單</span>
+    </div>
+
     <!-- 常買清單列 -->
     <div class="freq-bar" id="freqBar">
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%;">
             <span class="freq-bar-title">⭐ <span id="freqBarTitleText" class="editable-text" contenteditable="true" onblur="saveFreqBarTitleCustom()" title="點擊即可更改常買清單標題">常買清單</span>：</span>
-            <div id="freqListContainer" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
-            <span style="font-size:12px; color:#999;">(點擊常買清單可直接編輯或匯入)</span>
+            <button class="btn-action" style="padding: 2px 8px; font-size: 12px; font-weight: normal; border-radius: 12px; background: #27ae60;" onclick="createEmptyFrequentList()" title="手動建立新的常買清單">+ 加入清單</button>
+            <div id="freqListContainer" style="display:flex; gap:10px; flex-wrap:wrap; align-items: center;"></div>
+            <span style="font-size:12px; color:#999;" class="desktop-only-element">(點擊常買清單可直接編輯或匯入)</span>
         </div>
         <div>
             <button class="btn-action" id="batchDelFreqBtn" style="background: #ff4757; padding: 5px 12px; font-size: 12px; border-radius: 15px; display: none;" onclick="openBatchDeleteFreqModal()">🗑️ 批次刪除<span id="batchDelFreqNameText">常買清單</span></button>
@@ -322,7 +407,7 @@
 
 <div class="container">
     <div class="sidebar">
-        <!-- 分類區塊上方新增兩個按鈕：批次刪除分類 與 全部刪除分類，完美切齊下方分類選單寬度 -->
+        <!-- 分類區塊上方兩個按鈕，完美切齊下方分類選單寬度 -->
         <div style="display: flex; width: 100%;">
             <button onclick="openBatchDeleteCategoryModal()" style="flex: 1; padding: 8px 4px; background: #e67e22; color: white; border: 1px solid #e67e22; border-bottom: none; border-right: 1px solid #fff; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center;" title="批次選擇刪除自定義分類">🗑️ 批次刪除</button>
             <button onclick="deleteAllCustomCategories()" style="flex: 1; padding: 8px 4px; background: #ff4757; color: white; border: 1px solid #ff4757; border-bottom: none; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center;" title="刪除全部自定義分類">🗑️ 全部刪除</button>
@@ -612,6 +697,18 @@
     let activeContextMenuProductId = null;
     let hoveredProductId = null;
 
+    // 動態更新側邊欄固定位置
+    function updateSidebarSticky() {
+        const header = document.querySelector('header');
+        const sidebar = document.querySelector('.sidebar');
+        if (header && sidebar) {
+            const hHeight = header.offsetHeight;
+            sidebar.style.top = (hHeight + 10) + 'px';
+            sidebar.style.maxHeight = `calc(100vh - ${hHeight + 20}px)`;
+        }
+    }
+    window.addEventListener('resize', updateSidebarSticky);
+
     function init() {
         // 優先檢查網址 Hash 是否帶有資料傳遞 (#data=...)
         const hash = window.location.hash;
@@ -768,6 +865,42 @@
                 }
             }
         });
+        
+        setTimeout(updateSidebarSticky, 100);
+    }
+
+    // 手機版上方選單收合切換
+    let isMobileCollapsed = false;
+    function toggleMobileHeader() {
+        isMobileCollapsed = !isMobileCollapsed;
+        const headerEl = document.querySelector('header');
+        const textEl = document.getElementById('mobileCollapseText');
+        if (isMobileCollapsed) {
+            headerEl.classList.add('collapsed');
+            textEl.innerText = '▼ 展開上方選單';
+        } else {
+            headerEl.classList.remove('collapsed');
+            textEl.innerText = '▲ 收起上方選單';
+        }
+        setTimeout(updateSidebarSticky, 50);
+    }
+
+    // 建立空的常買清單類別
+    function createEmptyFrequentList() {
+        if (frequentLists.length >= 10) {
+            alert("常買清單最多只能新增 10 個！");
+            return;
+        }
+        const name = prompt("請為這個新常買清單命名 (例如: 辦公室補貨)：");
+        if (!name || name.trim() === "") return;
+
+        frequentLists.push({
+            id: Date.now(),
+            name: name.trim(),
+            items: []
+        });
+        triggerUpdate();
+        showToast(`已建立常買清單「${name.trim()}」！`);
     }
 
     // 一鍵預設：清除所有暫存與自訂內容恢復原狀
@@ -968,6 +1101,31 @@
         products.push(newProd);
         triggerUpdate();
         showToast(`已貼上商品「${newProd.name}」`);
+    }
+
+    // 直接導入單一常買清單至檢視清單
+    function importSingleFreqList(listId, event) {
+        event.stopPropagation();
+        const list = frequentLists.find(f => f.id === listId);
+        if(!list) return;
+        let importCount = 0;
+        for (let item of list.items) { 
+            if (products.some(p => p.id === item.id)) { 
+                if (Object.keys(cart).length >= 100 && !cart[item.id]) {
+                    alert("檢視清單最多只能加入 100 個商品！");
+                    break;
+                }
+                cart[item.id] = (cart[item.id] || 0) + item.qty; 
+                importCount++; 
+            } 
+        }
+        triggerUpdate();
+        if (importCount > 0) {
+            showToast(`已將常買清單「${list.name}」加入檢視清單！`);
+            openCartModal();
+        } else {
+            alert('沒有有效商品可加入。');
+        }
     }
 
     // 大量新增相關函式
@@ -1172,6 +1330,7 @@
     function toggleDesktopMode() {
         isDesktopMode = !isDesktopMode;
         initDesktopMode();
+        setTimeout(updateSidebarSticky, 100);
     }
 
     function saveData() {
@@ -1190,6 +1349,7 @@
         updateBatchDeleteFreqButtonState();
         updateProductView();
         updateCartDisplay();
+        setTimeout(updateSidebarSticky, 50);
     }
 
     // JSON 備份
@@ -1270,6 +1430,7 @@
         } else {
             budgetAreaContainer.classList.remove('over-budget');
         }
+        setTimeout(updateSidebarSticky, 50);
     }
 
     function showToast(message) {
@@ -1317,6 +1478,7 @@
             </div>
         `).join('');
         container.innerHTML = html;
+        setTimeout(updateSidebarSticky, 50);
     }
 
     function changeCategory(cat) {
@@ -1358,21 +1520,12 @@
 
     function renderFrequentLists() {
         const container = document.getElementById('freqListContainer');
-        if (frequentLists.length === 0) { container.innerHTML = `<span style="font-size:13px; color:#999; padding-top:5px;">尚無設定</span>`; return; }
-        container.innerHTML = frequentLists.map(list => `<button class="btn-freq" onclick="openFrequentPreview(${list.id})">${list.name}</button>`).join('');
-    }
-
-    function saveAsFrequentList() {
-        if (frequentLists.length >= 10) { alert("常買清單最多只能新增 10 個！"); return; }
-        if (Object.keys(cart).length === 0) { alert("清單內沒有商品無法儲存！"); return; }
-        const name = prompt("請為這個常買清單命名 (例如: 每週補貨)：");
-        if (!name || name.trim() === "") return;
-        
-        const itemsToSave = Object.keys(cart).map(id => ({ id: parseInt(id), qty: cart[id] }));
-        frequentLists.push({ id: Date.now(), name: name.trim(), items: itemsToSave });
-        
-        triggerUpdate();
-        showToast(`已建立常買清單「${name.trim()}」！`);
+        if (frequentLists.length === 0) { container.innerHTML = `<span style="font-size:13px; color:#999; padding-top:2px;">尚無設定</span>`; return; }
+        container.innerHTML = frequentLists.map(list => `
+            <div style="display: inline-flex; align-items: center; gap: 4px; background: #ffe0df; border: 1px solid var(--freq-color); border-radius: 15px; padding: 2px 4px 2px 10px;">
+                <span style="font-size: 13px; font-weight: bold; color: var(--freq-color); cursor: pointer;" onclick="openFrequentPreview(${list.id})" title="點擊編輯">${list.name}</span>
+            </div>
+        `).join('');
     }
 
     function clearCart() {
@@ -1971,6 +2124,16 @@
         triggerUpdate();
         if (document.getElementById('cartModal').style.display === 'flex') {
             renderCartTable();
+        }
+    }
+
+    function togglePriceExport() {
+        const isChecked = document.getElementById('showPriceToggle').checked;
+        const area = document.getElementById('export-area');
+        if (isChecked) {
+            area.classList.remove('hide-prices');
+        } else {
+            area.classList.add('hide-prices');
         }
     }
 
