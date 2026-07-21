@@ -82,9 +82,10 @@
         
         /* 左側分類：不跟隨滾動 (獨立滾動) */
         .sidebar { 
-            width: 160px; 
+            width: 182px; /* 160px 內容 + 22px 空間容納尖尖標示與捲軸 */
+            padding-right: 22px;
             flex-shrink: 0; 
-            background: white; 
+            background: transparent; 
             display: flex; 
             flex-direction: column; 
             align-self: flex-start;
@@ -92,6 +93,7 @@
             top: 150px; /* 預設值，由 JS 動態更新以防重疊 */
             max-height: 80vh; /* 預設值，由 JS 動態更新 */
             overflow-y: auto;
+            overflow-x: hidden; /* 隱藏左右滑軌，固定水平 */
         }
         /* 隱藏滾動條但保留功能 */
         .sidebar::-webkit-scrollbar { width: 4px; }
@@ -301,20 +303,21 @@
             body:not(.force-desktop) .sidebar { 
                 width: 90px; 
                 flex-shrink: 0; 
+                padding-right: 0; /* 手機版不需要預留尖尖空間 */
             }
             
             /* 針對手機版批次刪除與全部刪除分類按鈕變成垂直排列 */
             body:not(.force-desktop) .sidebar > div:first-child { flex-direction: column !important; }
             body:not(.force-desktop) .sidebar > div:first-child button { border-right: none !important; border-bottom: 1px solid #fff; padding: 8px 2px !important; font-size: 11px !important; }
             
-            body:not(.force-desktop) .category-list { display: flex; flex-direction: column; border: 1px solid #000080; border-bottom: none; }
+            body:not(.force-desktop) .category-list { display: flex; flex-direction: column; border: 1px solid #000080; border-bottom: none; width: 100%; }
             body:not(.force-desktop) .category-btn { padding: 12px 4px; font-size: 14px; border-right: none; }
             body:not(.force-desktop) .category-btn.active::after, body:not(.force-desktop) .category-btn.active::before { display: none; }
             body:not(.force-desktop) .del-cat-btn { display: block; position: absolute; right: 2px; top: 2px; background: rgba(255, 255, 255, 0.9); border-radius: 50%; width: 20px; height: 20px; font-size: 10px; line-height: 20px; text-align: center; }
             
-            body:not(.force-desktop) .add-category-box { display: flex; flex-direction: column; padding: 6px; }
-            body:not(.force-desktop) .add-category-box input { width: 100%; padding: 6px 4px; font-size: 12px; margin-bottom: 5px; }
-            body:not(.force-desktop) .add-category-box button { width: 100%; padding: 6px 4px; font-size: 12px; }
+            body:not(.force-desktop) .add-category-box { display: flex; flex-direction: column; padding: 6px; width: 100%; }
+            body:not(.force-desktop) .add-category-box input { width: 100%; padding: 6px 4px; font-size: 12px; margin-bottom: 5px; box-sizing: border-box; }
+            body:not(.force-desktop) .add-category-box button { width: 100%; padding: 6px 4px; font-size: 12px; box-sizing: border-box; }
             
             body:not(.force-desktop) .content-header { flex-direction: column; align-items: stretch; gap: 10px; }
             body:not(.force-desktop) .filters { display: flex; flex-direction: column; width: 100%; gap: 8px; }
@@ -1103,31 +1106,6 @@
         showToast(`已貼上商品「${newProd.name}」`);
     }
 
-    // 直接導入單一常買清單至檢視清單
-    function importSingleFreqList(listId, event) {
-        event.stopPropagation();
-        const list = frequentLists.find(f => f.id === listId);
-        if(!list) return;
-        let importCount = 0;
-        for (let item of list.items) { 
-            if (products.some(p => p.id === item.id)) { 
-                if (Object.keys(cart).length >= 100 && !cart[item.id]) {
-                    alert("檢視清單最多只能加入 100 個商品！");
-                    break;
-                }
-                cart[item.id] = (cart[item.id] || 0) + item.qty; 
-                importCount++; 
-            } 
-        }
-        triggerUpdate();
-        if (importCount > 0) {
-            showToast(`已將常買清單「${list.name}」加入檢視清單！`);
-            openCartModal();
-        } else {
-            alert('沒有有效商品可加入。');
-        }
-    }
-
     // 大量新增相關函式
     function openBulkModal() {
         if (isEditMode) toggleEditMode();
@@ -1238,7 +1216,7 @@
         });
     }
 
-    // 複製帶有個人資料的專屬連結
+    // 複製帶有個人資料的專屬短連結
     async function copyDataLink() {
         const dataToShare = {
             customCategories,
