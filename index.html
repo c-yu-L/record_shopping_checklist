@@ -70,7 +70,7 @@
         .btn-bulk { background-color: #27ae60; }
         .btn-bulk:hover { background-color: #219653; }
 
-        .freq-bar { display: flex; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px dashed #eee; width: 100%; }
+        .freq-bar { display: flex; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px dashed #eee; width: 100%; justify-content: space-between; flex-wrap: wrap; }
         .freq-bar-title { font-size: 14px; font-weight: bold; color: var(--freq-color); }
         .btn-freq { padding: 5px 15px; background: #ffe0df; color: var(--freq-color); border: 1px solid var(--freq-color); border-radius: 15px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; }
         .btn-freq:hover { background: var(--freq-color); color: white; }
@@ -168,8 +168,13 @@
         .remove-btn { color: #ff4757; cursor: pointer; text-decoration: underline; font-size: 13px; padding: 5px; }
         .empty-state { text-align: center; padding: 50px; color: #999; grid-column: 1/-1; }
         
-        #export-area.hide-prices .price-col { display: none; }
-        #export-area.hide-prices .export-total-line { display: none; }
+        /* 匯出表格欄位隱控開關樣式 */
+        #export-area.hide-img .col-img { display: none !important; }
+        #export-area.hide-brand .col-brand { display: none !important; }
+        #export-area.hide-cap .col-cap { display: none !important; }
+        #export-area.hide-custom .col-custom { display: none !important; }
+        #export-area.hide-price .col-price, #export-area.hide-price .col-subtotal, #export-area.hide-price .export-total-line { display: none !important; }
+        #export-area.hide-check .col-check { display: none !important; }
         
         .print-qty { display: none; }
         .exporting .qty-input { display: none !important; }
@@ -277,11 +282,12 @@
         <div class="logo-area">
             <h1>
                 <span id="siteTitle" class="editable-text" contenteditable="true" onblur="saveHeaderCustom()" title="點擊即可更改標題">待購清單</span>
-                <!-- 資料共享與備份還原按鈕組 -->
+                <!-- 資料共享與備份還原及一鍵預設按鈕組 -->
                 <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #8e44ad;" onclick="copyDataLink()" title="複製保有個人資料的連結">🔗 複製個人資料連結</button>
                 <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #34495e;" onclick="exportJsonData()" title="將所有設定與商品打包成備份檔案下載">💾 備份資料</button>
                 <input type="file" id="importJsonFile" accept=".json" style="display:none;" onchange="importJsonData(event)">
                 <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #16a085;" onclick="document.getElementById('importJsonFile').click()" title="從備份檔案還原資料">📂 還原資料</button>
+                <button class="btn-action" style="padding: 4px 12px; font-size: 12px; border-radius: 15px; vertical-align: middle; background-color: #c0392b;" onclick="resetToDefaultPage()" title="恢復為預設網頁（清除所有新增與自訂內容）">🔄 一鍵預設</button>
             </h1>
             <p><span id="siteSubtitle" class="editable-text" contenteditable="true" onblur="saveHeaderCustom()" title="點擊即可更改網頁介紹">方便記錄和麻煩他人代買</span></p>
         </div>
@@ -300,15 +306,26 @@
             <button class="btn-action" id="viewToggleBtn" style="background: #6c757d;" onclick="toggleDesktopMode()">💻 切換電腦版</button>
         </div>
     </div>
+    <!-- 常買清單列 -->
     <div class="freq-bar" id="freqBar">
-        <span class="freq-bar-title">⭐ 常買清單：</span>
-        <div id="freqListContainer" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
-        <span style="font-size:12px; color:#999;">(點擊常買清單可直接編輯或匯入)</span>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span class="freq-bar-title">⭐ <span id="freqBarTitleText" class="editable-text" contenteditable="true" onblur="saveFreqBarTitleCustom()" title="點擊即可更改常買清單標題">常買清單</span>：</span>
+            <div id="freqListContainer" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+            <span style="font-size:12px; color:#999;">(點擊常買清單可直接編輯或匯入)</span>
+        </div>
+        <div>
+            <button class="btn-action" id="batchDelFreqBtn" style="background: #ff4757; padding: 5px 12px; font-size: 12px; border-radius: 15px; display: none;" onclick="openBatchDeleteFreqModal()">🗑️ 批次刪除<span id="batchDelFreqNameText">常買清單</span></button>
+        </div>
     </div>
 </header>
 
 <div class="container">
     <div class="sidebar">
+        <!-- 分類區塊上方新增兩個按鈕：批次刪除分類 與 全部刪除分類，完美切齊下方分類選單寬度 -->
+        <div style="display: flex; width: 100%;">
+            <button onclick="openBatchDeleteCategoryModal()" style="flex: 1; padding: 8px 4px; background: #e67e22; color: white; border: 1px solid #e67e22; border-bottom: none; border-right: 1px solid #fff; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center;" title="批次選擇刪除自定義分類">🗑️ 批次刪除</button>
+            <button onclick="deleteAllCustomCategories()" style="flex: 1; padding: 8px 4px; background: #ff4757; color: white; border: 1px solid #ff4757; border-bottom: none; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center;" title="刪除全部自定義分類">🗑️ 全部刪除</button>
+        </div>
         <div class="category-list" id="categoryList"></div>
         <div class="add-category-box">
             <input type="text" id="newCategoryInput" placeholder="輸入自訂新分類">
@@ -456,9 +473,16 @@
             <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <button class="btn-action" style="background: var(--edit-color);" onclick="saveAsFrequentList()">⭐ 設為常買</button>
                 <button class="btn-action" style="background: #e84118;" onclick="clearCart()">🗑️ 清空全部</button>
-                <label style="cursor: pointer; font-weight: bold; font-size: 13px; background:#e6f7ff; padding:8px 10px; border-radius:5px; border:1px solid #91d5ff;">
-                    <input type="checkbox" id="showPriceToggle" checked onchange="togglePriceExport()"> 匯出顯示金額
-                </label>
+                <!-- 匯出欄位選擇（自動記憶設定） -->
+                <div style="display:flex; gap: 8px; align-items: center; flex-wrap: wrap; background:#e6f7ff; padding:6px 10px; border-radius:5px; border:1px solid #91d5ff; font-size: 13px; font-weight: bold;">
+                    <span>欄位選擇:</span>
+                    <label style="cursor:pointer;"><input type="checkbox" id="colImgChk" checked onchange="updateExportColumns()"> 圖片</label>
+                    <label style="cursor:pointer;"><input type="checkbox" id="colBrandChk" checked onchange="updateExportColumns()"> 品牌</label>
+                    <label style="cursor:pointer;"><input type="checkbox" id="colCapChk" checked onchange="updateExportColumns()"> 容量</label>
+                    <label style="cursor:pointer;"><input type="checkbox" id="colCustomChk" checked onchange="updateExportColumns()"> 自定義</label>
+                    <label style="cursor:pointer;"><input type="checkbox" id="colPriceChk" checked onchange="updateExportColumns()"> 金額</label>
+                    <label style="cursor:pointer;"><input type="checkbox" id="colCheckChk" checked onchange="updateExportColumns()"> 勾選框</label>
+                </div>
             </div>
             
             <div style="display:flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -472,15 +496,15 @@
                 <table class="export-table" id="exportTable">
                     <thead>
                         <tr>
-                            <th>商品圖片</th>
-                            <th>品名</th>
-                            <th>品牌</th>
-                            <th>容量/規格</th>
-                            <th>自定義</th>
-                            <th>數量</th>
-                            <th class="price-col">單價</th>
-                            <th class="price-col">小計</th>
-                            <th>代辦勾選</th>
+                            <th class="col-img">商品圖片</th>
+                            <th class="col-name">品名</th>
+                            <th class="col-brand">品牌</th>
+                            <th class="col-cap">容量/規格</th>
+                            <th class="col-custom">自定義</th>
+                            <th class="col-qty">數量</th>
+                            <th class="price-col col-price">單價</th>
+                            <th class="price-col col-subtotal">小計</th>
+                            <th class="col-check">代辦勾選</th>
                             <th class="action-col">操作</th>
                         </tr>
                     </thead>
@@ -514,6 +538,34 @@
         <div style="display:flex; gap:10px; margin-top: 20px; flex-wrap:wrap;">
             <button class="btn-submit" style="flex: 1; margin-top:0;" onclick="importFrequentList()">✅ 一鍵匯入至待購清單</button>
             <button class="btn-submit" style="background:#ff4757; width:auto; margin-top:0;" onclick="deleteFrequentList()">🗑️ 刪除此常買設定</button>
+        </div>
+    </div>
+</div>
+
+<!-- 批次刪除常買清單彈窗 -->
+<div class="modal-overlay" id="batchDeleteFreqModal">
+    <div class="modal-content small" style="width: 450px;">
+        <span class="modal-close" onclick="closeModal('batchDeleteFreqModal')">&times;</span>
+        <h2 style="margin-bottom: 15px;" id="batchDelModalTitle">批次刪除常買清單</h2>
+        <p style="font-size:13px; color:#666; margin-bottom:15px;">請勾選想要刪除的常買清單：</p>
+        <div id="batchDeleteFreqListContainer" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; padding: 10px; background: white; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px;"></div>
+        <div style="display:flex; gap: 10px;">
+            <button class="btn-submit" style="background: #ff4757; margin-top:0;" onclick="executeBatchDeleteFreq()">確認刪除選定項目</button>
+            <button class="btn-submit" style="background: #ddd; color: #333; margin-top:0;" onclick="closeModal('batchDeleteFreqModal')">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 批次刪除分類彈窗 -->
+<div class="modal-overlay" id="batchDeleteCategoryModal">
+    <div class="modal-content small" style="width: 450px;">
+        <span class="modal-close" onclick="closeModal('batchDeleteCategoryModal')">&times;</span>
+        <h2 style="margin-bottom: 15px;">批次刪除分類</h2>
+        <p style="font-size:13px; color:#666; margin-bottom:15px;">請勾選想要刪除的自訂分類（該分類下的商品將移至未分類）：</p>
+        <div id="batchDeleteCategoryListContainer" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; padding: 10px; background: white; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px;"></div>
+        <div style="display:flex; gap: 10px;">
+            <button class="btn-submit" style="background: #e67e22; margin-top:0;" onclick="executeBatchDeleteCategory()">確認刪除選定分類</button>
+            <button class="btn-submit" style="background: #ddd; color: #333; margin-top:0;" onclick="closeModal('batchDeleteCategoryModal')">取消</button>
         </div>
     </div>
 </div>
@@ -582,6 +634,10 @@
                     document.getElementById('siteSubtitle').innerText = data.siteSubtitle;
                     localStorage.setItem('daigou_custom_subtitle', data.siteSubtitle);
                 }
+                if (data.freqBarTitle) {
+                    document.getElementById('freqBarTitleText').innerText = data.freqBarTitle;
+                    localStorage.setItem('daigou_custom_freq_title', data.freqBarTitle);
+                }
                 saveData(); // 自動寫入本地設備存檔
             } catch (err) {
                 console.error('Failed to parse share data from URL', err);
@@ -593,13 +649,16 @@
             document.getElementById('budgetInput').value = savedBudget;
         }
 
-        // 載入自訂標題與介紹
+        // 載入自訂標題與介紹及常買清單標題
         const savedTitle = localStorage.getItem('daigou_custom_title');
         const savedSubtitle = localStorage.getItem('daigou_custom_subtitle');
+        const savedFreqTitle = localStorage.getItem('daigou_custom_freq_title');
         if (canPersist && savedTitle) document.getElementById('siteTitle').innerText = savedTitle;
         if (canPersist && savedSubtitle) document.getElementById('siteSubtitle').innerText = savedSubtitle;
+        if (canPersist && savedFreqTitle) document.getElementById('freqBarTitleText').innerText = savedFreqTitle;
 
         updateCartModalTitle();
+        updateBatchDeleteFreqButtonState();
         initDesktopMode();
         renderCategories();
         updateProductView();
@@ -707,6 +766,183 @@
                 }
             }
         });
+    }
+
+    // 一鍵預設：清除所有暫存與自訂內容恢復原狀
+    function resetToDefaultPage() {
+        if (confirm('確定要一鍵恢復為預設網頁嗎？\n這將會清除所有您新增的商品、分類、常買清單與自訂設定！')) {
+            localStorage.removeItem('daigou_custom_cats');
+            localStorage.removeItem('daigou_prods');
+            localStorage.removeItem('daigou_freq_lists');
+            localStorage.removeItem('daigou_budget');
+            localStorage.removeItem('daigou_custom_title');
+            localStorage.removeItem('daigou_custom_subtitle');
+            localStorage.removeItem('daigou_custom_freq_title');
+            localStorage.removeItem('daigou_export_cols');
+            localStorage.removeItem('daigou_desktop_mode');
+
+            if (window.location.hash) {
+                history.replaceState(null, null, window.location.pathname);
+            }
+
+            window.location.href = window.location.pathname;
+        }
+    }
+
+    // 更新匯出表格欄位顯示狀態（並儲存至 localStorage）
+    function updateExportColumns() {
+        const area = document.getElementById('export-area');
+        
+        const imgOn = document.getElementById('colImgChk').checked;
+        const brandOn = document.getElementById('colBrandChk').checked;
+        const capOn = document.getElementById('colCapChk').checked;
+        const customOn = document.getElementById('colCustomChk').checked;
+        const priceOn = document.getElementById('colPriceChk').checked;
+        const checkOn = document.getElementById('colCheckChk').checked;
+
+        if (imgOn) area.classList.remove('hide-img'); else area.classList.add('hide-img');
+        if (brandOn) area.classList.remove('hide-brand'); else area.classList.add('hide-brand');
+        if (capOn) area.classList.remove('hide-cap'); else area.classList.add('hide-cap');
+        if (customOn) area.classList.remove('hide-custom'); else area.classList.add('hide-custom');
+        if (priceOn) area.classList.remove('hide-price'); else area.classList.add('hide-price');
+        if (checkOn) area.classList.remove('hide-check'); else area.classList.add('hide-check');
+
+        const colsState = { img: imgOn, brand: brandOn, cap: capOn, custom: customOn, price: priceOn, check: checkOn };
+        localStorage.setItem('daigou_export_cols', JSON.stringify(colsState));
+    }
+
+    function loadExportColumns() {
+        const saved = localStorage.getItem('daigou_export_cols');
+        if (saved) {
+            try {
+                const cols = JSON.parse(saved);
+                if (document.getElementById('colImgChk')) document.getElementById('colImgChk').checked = cols.img ?? true;
+                if (document.getElementById('colBrandChk')) document.getElementById('colBrandChk').checked = cols.brand ?? true;
+                if (document.getElementById('colCapChk')) document.getElementById('colCapChk').checked = cols.cap ?? true;
+                if (document.getElementById('colCustomChk')) document.getElementById('colCustomChk').checked = cols.custom ?? true;
+                if (document.getElementById('colPriceChk')) document.getElementById('colPriceChk').checked = cols.price ?? true;
+                if (document.getElementById('colCheckChk')) document.getElementById('colCheckChk').checked = cols.check ?? true;
+            } catch(e) {}
+        }
+        updateExportColumns();
+    }
+
+    // 刪除全部自定義分類
+    function deleteAllCustomCategories() {
+        if (customCategories.length === 0) {
+            alert('目前沒有自定義分類可刪除！');
+            return;
+        }
+        if (confirm('確定要刪除全部自定義分類嗎？\n這些分類下的所有商品會被移至「未分類」。')) {
+            customCategories = [];
+            products.forEach(p => { p.category = '未分類'; });
+            if (currentCategory !== '所有' && currentCategory !== '未分類') {
+                currentCategory = '所有';
+            }
+            triggerUpdate();
+            showToast('已刪除所有自定義分類！');
+        }
+    }
+
+    // 打開批次刪除分類彈窗
+    function openBatchDeleteCategoryModal() {
+        if (customCategories.length === 0) {
+            alert('目前沒有自定義分類可刪除！');
+            return;
+        }
+        const container = document.getElementById('batchDeleteCategoryListContainer');
+        container.innerHTML = customCategories.map(cat => `
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer;">
+                <input type="checkbox" class="batch-cat-chk" value="${cat}" style="width: 16px; height: 16px; cursor: pointer;">
+                <span>${cat}</span>
+            </label>
+        `).join('');
+
+        document.getElementById('batchDeleteCategoryModal').style.display = 'flex';
+    }
+
+    // 執行批次刪除分類
+    function executeBatchDeleteCategory() {
+        const checkboxes = document.querySelectorAll('.batch-cat-chk:checked');
+        if (checkboxes.length === 0) {
+            alert('請至少勾選一項分類！');
+            return;
+        }
+        if (confirm(`確定要刪除選定的 ${checkboxes.length} 項分類嗎？\n該分類下的商品會被移至「未分類」。`)) {
+            const catsToDelete = new Set(Array.from(checkboxes).map(chk => chk.value));
+            customCategories = customCategories.filter(c => !catsToDelete.has(c));
+            products.forEach(p => {
+                if (catsToDelete.has(p.category)) p.category = '未分類';
+            });
+            if (catsToDelete.has(currentCategory)) {
+                currentCategory = '所有';
+            }
+            triggerUpdate();
+            closeModal('batchDeleteCategoryModal');
+            showToast('已成功批次刪除分類！');
+        }
+    }
+
+    // 常買清單標題自訂儲存
+    function saveFreqBarTitleCustom() {
+        const titleEl = document.getElementById('freqBarTitleText');
+        const val = titleEl.innerText.trim();
+        if (canPersist) {
+            if (val === '' || val === '常買清單') {
+                localStorage.removeItem('daigou_custom_freq_title');
+                titleEl.innerText = '常買清單';
+            } else {
+                localStorage.setItem('daigou_custom_freq_title', val);
+            }
+        }
+        updateBatchDeleteFreqButtonState();
+    }
+
+    // 更新常買清單批次刪除按鈕文字與顯示狀態
+    function updateBatchDeleteFreqButtonState() {
+        const titleEl = document.getElementById('freqBarTitleText');
+        const freqTitle = titleEl ? (titleEl.innerText.trim() || '常買清單') : '常買清單';
+        document.getElementById('batchDelFreqNameText').innerText = freqTitle;
+
+        const btn = document.getElementById('batchDelFreqBtn');
+        if (frequentLists.length > 0) {
+            btn.style.display = 'inline-block';
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+
+    // 打開批次刪除常買清單彈窗
+    function openBatchDeleteFreqModal() {
+        const titleEl = document.getElementById('freqBarTitleText');
+        const freqTitle = titleEl ? (titleEl.innerText.trim() || '常買清單') : '常買清單';
+        document.getElementById('batchDelModalTitle').innerText = `批次刪除${freqTitle}`;
+
+        const container = document.getElementById('batchDeleteFreqListContainer');
+        container.innerHTML = frequentLists.map(list => `
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer;">
+                <input type="checkbox" class="batch-freq-chk" value="${list.id}" style="width: 16px; height: 16px; cursor: pointer;">
+                <span>${list.name} (${list.items.length}項商品)</span>
+            </label>
+        `).join('');
+
+        document.getElementById('batchDeleteFreqModal').style.display = 'flex';
+    }
+
+    // 執行批次刪除常買清單
+    function executeBatchDeleteFreq() {
+        const checkboxes = document.querySelectorAll('.batch-freq-chk:checked');
+        if (checkboxes.length === 0) {
+            alert('請至少勾選一項常買清單！');
+            return;
+        }
+        if (confirm(`確定要刪除選定的 ${checkboxes.length} 項常買清單嗎？`)) {
+            const idsToDelete = new Set(Array.from(checkboxes).map(chk => parseInt(chk.value)));
+            frequentLists = frequentLists.filter(f => !idsToDelete.has(f.id));
+            triggerUpdate();
+            closeModal('batchDeleteFreqModal');
+            showToast('已成功批次刪除常買清單！');
+        }
     }
 
     // 右鍵選單：複製商品
@@ -843,27 +1079,44 @@
     }
 
     // 複製帶有個人資料的專屬連結
-    function copyDataLink() {
+    async function copyDataLink() {
         const dataToShare = {
             customCategories,
             products,
             frequentLists,
             budget: document.getElementById('budgetInput').value,
             siteTitle: document.getElementById('siteTitle').innerText,
-            siteSubtitle: document.getElementById('siteSubtitle').innerText
+            siteSubtitle: document.getElementById('siteSubtitle').innerText,
+            freqBarTitle: document.getElementById('freqBarTitleText').innerText
         };
         const jsonStr = JSON.stringify(dataToShare);
         const encoded = btoa(encodeURIComponent(jsonStr));
-        const shareUrl = window.location.origin + window.location.pathname + '#data=' + encoded;
+        const longUrl = window.location.origin + window.location.pathname + '#data=' + encoded;
 
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(shareUrl).then(() => {
-                showToast('已複製帶有個人資料的連結！可在手機或書籤開啟使用');
-            }).catch(() => {
-                prompt('請複製以下個人資料連結：', shareUrl);
-            });
-        } else {
-            prompt('請複製以下個人資料連結：', shareUrl);
+        showToast('正在產生短連結...');
+
+        try {
+            const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`);
+            if (!response.ok) throw new Error('Network response was not ok');
+            const shortUrl = await response.text();
+
+            if (shortUrl && shortUrl.startsWith('http')) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(shortUrl);
+                    showToast('已複製個人資料短連結！可在 LINE 直接貼上開啟');
+                } else {
+                    prompt('請複製以下短連結：', shortUrl);
+                }
+            } else {
+                throw new Error('Invalid short URL');
+            }
+        } catch (err) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(longUrl);
+                showToast('資料量較大，已複製原始連結！');
+            } else {
+                prompt('資料量較大，請複製以下連結：', longUrl);
+            }
         }
     }
 
@@ -932,6 +1185,7 @@
         checkBudget();
         renderCategories();
         renderFrequentLists();
+        updateBatchDeleteFreqButtonState();
         updateProductView();
         updateCartDisplay();
     }
@@ -944,7 +1198,8 @@
             frequentLists,
             budget: document.getElementById('budgetInput').value,
             siteTitle: document.getElementById('siteTitle').innerText,
-            siteSubtitle: document.getElementById('siteSubtitle').innerText
+            siteSubtitle: document.getElementById('siteSubtitle').innerText,
+            freqBarTitle: document.getElementById('freqBarTitleText').innerText
         };
         const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -975,6 +1230,10 @@
                 if (data.siteSubtitle) {
                     document.getElementById('siteSubtitle').innerText = data.siteSubtitle;
                     localStorage.setItem('daigou_custom_subtitle', data.siteSubtitle);
+                }
+                if (data.freqBarTitle) {
+                    document.getElementById('freqBarTitleText').innerText = data.freqBarTitle;
+                    localStorage.setItem('daigou_custom_freq_title', data.freqBarTitle);
                 }
                 saveData();
                 triggerUpdate();
@@ -1656,7 +1915,7 @@
         if (isDeleteMode) toggleDeleteMode();
         updateCartModalTitle();
         document.getElementById('cartModal').style.display = 'flex';
-        togglePriceExport(); 
+        loadExportColumns(); 
         renderCartTable();
     }
     
@@ -1686,18 +1945,18 @@
 
             return `
                 <tr>
-                    <td><img src="${p.image}" alt="${p.name}"></td>
-                    <td>${p.name}</td>
-                    <td>${brandText}</td>
-                    <td>${capacityText}</td>
-                    <td>${customText}</td>
-                    <td>
+                    <td class="col-img"><img src="${p.image}" alt="${p.name}"></td>
+                    <td class="col-name">${p.name}</td>
+                    <td class="col-brand">${brandText}</td>
+                    <td class="col-cap">${capacityText}</td>
+                    <td class="col-custom">${customText}</td>
+                    <td class="col-qty">
                         <input type="number" class="qty-input" value="${qty}" min="1" max="100" onchange="updateQtyLimit(this); updateModalQty(${p.id}, this.value)">
                         <span class="print-qty">${qty}</span>
                     </td>
-                    <td class="price-col" style="color:var(--text-muted);">${priceText}</td>
-                    <td class="price-col" style="color:var(--warning-color); font-weight:bold;">${subtotalText}</td>
-                    <td><div class="export-checkbox"></div></td>
+                    <td class="price-col col-price" style="color:var(--text-muted);">${priceText}</td>
+                    <td class="price-col col-subtotal" style="color:var(--warning-color); font-weight:bold;">${subtotalText}</td>
+                    <td class="col-check"><div class="export-checkbox"></div></td>
                     <td class="action-col"><span class="remove-btn" onclick="removeFromCart(${p.id})">刪除</span></td>
                 </tr>
             `;
@@ -1709,16 +1968,6 @@
         triggerUpdate();
         if (document.getElementById('cartModal').style.display === 'flex') {
             renderCartTable();
-        }
-    }
-
-    function togglePriceExport() {
-        const isChecked = document.getElementById('showPriceToggle').checked;
-        const area = document.getElementById('export-area');
-        if (isChecked) {
-            area.classList.remove('hide-prices');
-        } else {
-            area.classList.add('hide-prices');
         }
     }
 
