@@ -58,10 +58,12 @@
         .search-box { padding: 8px 15px; border: 2px solid #eee; border-radius: 20px; outline: none; transition: border 0.3s; width: 180px; }
         .search-box:focus { border-color: var(--primary-color); }
         
-        .budget-area { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; background: #f8f9fa; padding: 5px 15px; border-radius: 20px; border: 1px solid #ddd; }
-        .budget-area input { width: 70px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; outline: none; }
-        .budget-warning { color: var(--warning-color); font-weight: bold; font-size: 14px; display: none; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .budget-area { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; background: #f8f9fa; padding: 5px 15px; border-radius: 20px; border: 1px solid #ddd; transition: all 0.3s; }
+        .budget-area input { width: 85px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-weight: bold; }
+        
+        /* 超標時的紅字紅框樣式 */
+        .budget-area.over-budget { border-color: var(--warning-color); color: var(--warning-color); background: #fff5f5; }
+        .budget-area.over-budget input { border-color: var(--warning-color); color: var(--warning-color); }
 
         .btn-action { padding: 8px 15px; background-color: var(--primary-color); color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
         .btn-action:hover { background-color: #357abd; }
@@ -294,10 +296,9 @@
         <div class="header-controls">
             <input type="text" id="searchInput" class="search-box" placeholder="搜尋商品名稱...">
             
-            <div class="budget-area">
-                預算設定: $ <input type="number" id="budgetInput" placeholder="無限制" min="0" oninput="checkBudget()">
+            <div class="budget-area" id="budgetAreaContainer">
+                預算: $ <input type="number" id="budgetInput" placeholder="無限制" min="0" oninput="checkBudget()">
             </div>
-            <span class="budget-warning" id="budgetWarning">⚠️ 已超標</span>
 
             <button class="btn-action btn-add" onclick="openAddProductModal()">+ 新增商品</button>
             <button class="btn-action btn-bulk" onclick="openBulkModal()">+ 大量新增</button>
@@ -664,6 +665,7 @@
         updateProductView();
         renderFrequentLists();
         updateCartDisplay();
+        checkBudget();
         
         document.getElementById('searchInput').addEventListener('input', updateProductView);
         document.getElementById('brandFilter').addEventListener('change', updateProductView);
@@ -1260,12 +1262,13 @@
 
         document.getElementById('cartTotalDisplay').innerText = `$${total}`;
 
-        const warningEl = document.getElementById('budgetWarning');
-        if (budgetInput && parseInt(budgetInput) > 0 && total > parseInt(budgetInput)) {
-            warningEl.style.display = 'inline-block';
-            warningEl.innerText = `⚠️ 已超標!`;
+        const budgetAreaContainer = document.getElementById('budgetAreaContainer');
+        const budgetVal = parseInt(budgetInput);
+
+        if (budgetInput && !isNaN(budgetVal) && budgetVal > 0 && total > budgetVal) {
+            budgetAreaContainer.classList.add('over-budget');
         } else {
-            warningEl.style.display = 'none';
+            budgetAreaContainer.classList.remove('over-budget');
         }
     }
 
