@@ -470,6 +470,14 @@
 <script>
     const fallbackImage = `data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='16' fill='%23999'%3E無圖片%3C/text%3E%3C/svg%3E`;
 
+    // 智慧來源辨識：檢測是否為透過通訊軟體內建瀏覽器開啟的連結
+    const ua = navigator.userAgent || '';
+    const isInApp = /Line|FBAN|FBAV|Instagram|MicroMessenger|WebView/i.test(ua);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    
+    // 若為預設瀏覽器開啟或是設置捷徑/桌面則記錄 (canPersist = true)；若是透過連結開啟則不紀錄當次新增 (canPersist = false)
+    const canPersist = !isInApp || isStandalone;
+
     let customCategories = JSON.parse(localStorage.getItem('daigou_custom_cats')) || [];
     let products = JSON.parse(localStorage.getItem('daigou_prods')) || [];
     let frequentLists = JSON.parse(localStorage.getItem('daigou_freq_lists')) || [];
@@ -489,13 +497,15 @@
 
     function init() {
         const savedBudget = localStorage.getItem('daigou_budget');
-        if (savedBudget) document.getElementById('budgetInput').value = savedBudget;
+        if (canPersist && savedBudget) {
+            document.getElementById('budgetInput').value = savedBudget;
+        }
 
         // 載入自訂標題與介紹
         const savedTitle = localStorage.getItem('daigou_custom_title');
         const savedSubtitle = localStorage.getItem('daigou_custom_subtitle');
-        if (savedTitle) document.getElementById('siteTitle').innerText = savedTitle;
-        if (savedSubtitle) document.getElementById('siteSubtitle').innerText = savedSubtitle;
+        if (canPersist && savedTitle) document.getElementById('siteTitle').innerText = savedTitle;
+        if (canPersist && savedSubtitle) document.getElementById('siteSubtitle').innerText = savedSubtitle;
 
         updateCartModalTitle();
         initDesktopMode();
@@ -552,18 +562,20 @@
         let titleVal = titleEl.innerText.trim();
         let subtitleVal = subtitleEl.innerText.trim();
 
-        if (titleVal === '' || titleVal === '待購清單') {
-            localStorage.removeItem('daigou_custom_title');
-            titleEl.innerText = '待購清單';
-        } else {
-            localStorage.setItem('daigou_custom_title', titleVal);
-        }
+        if (canPersist) {
+            if (titleVal === '' || titleVal === '待購清單') {
+                localStorage.removeItem('daigou_custom_title');
+                titleEl.innerText = '待購清單';
+            } else {
+                localStorage.setItem('daigou_custom_title', titleVal);
+            }
 
-        if (subtitleVal === '' || subtitleVal === '方便記錄和麻煩他人代買') {
-            localStorage.removeItem('daigou_custom_subtitle');
-            subtitleEl.innerText = '方便記錄和麻煩他人代買';
-        } else {
-            localStorage.setItem('daigou_custom_subtitle', subtitleVal);
+            if (subtitleVal === '' || subtitleVal === '方便記錄和麻煩他人代買') {
+                localStorage.removeItem('daigou_custom_subtitle');
+                subtitleEl.innerText = '方便記錄和麻煩他人代買';
+            } else {
+                localStorage.setItem('daigou_custom_subtitle', subtitleVal);
+            }
         }
 
         updateCartModalTitle();
@@ -589,6 +601,7 @@
     }
 
     function saveData() {
+        if (!canPersist) return; // 透過連結開啟時不紀錄當次新增/修改
         localStorage.setItem('daigou_custom_cats', JSON.stringify(customCategories));
         localStorage.setItem('daigou_prods', JSON.stringify(products));
         localStorage.setItem('daigou_freq_lists', JSON.stringify(frequentLists));
@@ -606,7 +619,9 @@
 
     function checkBudget() {
         const budgetInput = document.getElementById('budgetInput').value;
-        localStorage.setItem('daigou_budget', budgetInput);
+        if (canPersist) {
+            localStorage.setItem('daigou_budget', budgetInput);
+        }
 
         let total = 0;
         products.forEach(p => {
