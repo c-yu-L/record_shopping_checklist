@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" id="viewportMeta" content="width=device-width, initial-scale=1.0">
     <title>待購清單</title>
-    <!-- 引入 html2canvas 與 html2pdf 支援 JPG, PDF 匯出及分享 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -23,45 +22,33 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; cursor: default; }
         body { background-color: var(--bg-color); color: var(--text-main); }
         
-        /* 確保可點擊與輸入的元素顯示正確且明顯的游標 */
-        button, label, select, input[type="file"], input[type="checkbox"], input[type="radio"], .remove-btn, .category-btn {
-            cursor: pointer;
-        }
-        input[type="text"], input[type="number"], .search-box, .editable-text, .bulk-row input, .bulk-row select {
-            cursor: text;
-        }
+        button, label, select, input[type="file"], input[type="checkbox"], input[type="radio"], .remove-btn, .category-btn { cursor: pointer; }
+        input[type="text"], input[type="number"], input[type="date"], textarea, .editable-text, .bulk-row input, .bulk-row select, .bulk-row textarea, .be-row input, .be-row select, .be-row textarea { cursor: text; }
 
-        /* 可編輯標題樣式 */
-        .editable-text {
-            display: inline-block;
-            border-bottom: 1px dashed transparent;
-            transition: all 0.2s;
-            border-radius: 4px;
-            padding: 2px 4px;
-        }
-        .editable-text:hover {
-            border-bottom: 1px dashed var(--primary-color);
-            background: rgba(74, 144, 226, 0.05);
-        }
+        .editable-text { display: inline-block; border-bottom: 1px dashed transparent; transition: all 0.2s; border-radius: 4px; padding: 2px 4px; }
+        .editable-text:hover { border-bottom: 1px dashed var(--primary-color); background: rgba(74, 144, 226, 0.05); }
 
-        /* Header */
-        header {
-            display: flex; flex-direction: column; gap: 15px;
-            background: white; padding: 15px 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: sticky; top: 0; z-index: 100;
-        }
+        header { display: flex; flex-direction: column; gap: 15px; background: white; padding: 15px 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
         .header-top { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 15px; }
         .logo-area h1 { font-size: 24px; color: var(--primary-color); display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
         .logo-area p { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
         
-        .header-controls { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-        .search-box { padding: 8px 15px; border: 2px solid #eee; border-radius: 20px; outline: none; transition: border 0.3s; width: 180px; }
-        .search-box:focus { border-color: var(--primary-color); }
+        .header-controls { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; position: relative; }
         
+        /* 複合式搜尋框 (含日期選單) */
+        .search-container { display: flex; align-items: center; background: white; border: 2px solid #eee; border-radius: 20px; padding: 4px 15px; width: 220px; transition: border 0.3s; }
+        .search-container:focus-within { border-color: var(--primary-color); }
+        .search-box { border: none; outline: none; background: transparent; width: 100%; font-size: 14px; cursor: text; }
+        .search-date-picker { border: none; outline: none; background: transparent; cursor: pointer; padding: 0; margin-left: 5px; width: 20px; color: var(--primary-color); }
+        
+        /* 標籤自動完成選單 */
+        #tagSuggestions { display: none; position: absolute; top: 40px; left: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; width: 220px; overflow: hidden; }
+        .tag-suggestion-item { padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--primary-color); }
+        .tag-suggestion-item:hover { background: #f0f0f0; }
+
         .budget-area { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; background: #f8f9fa; padding: 5px 15px; border-radius: 20px; border: 1px solid #ddd; transition: all 0.3s; }
         .budget-area input { width: 85px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-weight: bold; }
         
-        /* 超標時的紅字紅框樣式 */
         .budget-area.over-budget { border-color: var(--warning-color); color: var(--warning-color); background: #fff5f5; }
         .budget-area.over-budget input { border-color: var(--warning-color); color: var(--warning-color); }
 
@@ -77,25 +64,9 @@
         .btn-freq { padding: 5px 15px; background: #ffe0df; color: var(--freq-color); border: 1px solid var(--freq-color); border-radius: 15px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; }
         .btn-freq:hover { background: var(--freq-color); color: white; }
 
-        /* Sidebar & Layout */
         .container { display: flex; max-width: 1400px; margin: 20px auto; padding: 0 20px; gap: 20px; }
         
-        /* 左側分類：不跟隨滾動 (獨立滾動) */
-        .sidebar { 
-            width: 182px; /* 160px 內容 + 22px 空間容納尖尖標示與捲軸 */
-            padding-right: 22px;
-            flex-shrink: 0; 
-            background: transparent; 
-            display: flex; 
-            flex-direction: column; 
-            align-self: flex-start;
-            position: sticky;
-            top: 150px; /* 預設值，由 JS 動態更新以防重疊 */
-            max-height: 80vh; /* 預設值，由 JS 動態更新 */
-            overflow-y: auto;
-            overflow-x: hidden; /* 隱藏左右滑軌，固定水平 */
-        }
-        /* 隱藏滾動條但保留功能 */
+        .sidebar { width: 182px; padding-right: 22px; flex-shrink: 0; background: transparent; display: flex; flex-direction: column; align-self: flex-start; position: sticky; top: 150px; max-height: 80vh; overflow-y: auto; overflow-x: hidden; }
         .sidebar::-webkit-scrollbar { width: 4px; }
         .sidebar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
 
@@ -103,19 +74,21 @@
         .category-item { position: relative; }
         .category-item.dragging { opacity: 0.4; background: #eee; }
         
-        .category-btn { display: block; width: 100%; padding: 15px; border: none; background: var(--sidebar-bg); border-bottom: 1px solid #000080; text-align: center; font-size: 16px; font-weight: bold; cursor: pointer; position: relative; transition: background 0.2s; pointer-events: none; }
+        .category-btn { display: block; width: 100%; padding: 15px; border: none; background: var(--sidebar-bg); border-bottom: 1px solid #000080; text-align: center; font-size: 16px; font-weight: bold; cursor: pointer; position: relative; transition: background 0.2s; pointer-events: auto; }
         .category-item:hover .category-btn { background: var(--sidebar-active); }
         .category-btn.active { background: var(--sidebar-active); border-right: none; }
         .category-btn.active::after { content: ''; position: absolute; right: -15px; top: -1px; bottom: -1px; width: 0; height: 0; border-top: 26px solid transparent; border-bottom: 26px solid transparent; border-left: 15px solid var(--sidebar-active); z-index: 2; }
         .category-btn.active::before { content: ''; position: absolute; right: -17px; top: -1px; bottom: -1px; width: 0; height: 0; border-top: 26px solid transparent; border-bottom: 26px solid transparent; border-left: 16px solid #000080; z-index: 1; }
+        
+        /* 刪除與編輯按鈕樣式 */
         .del-cat-btn { position: absolute; right: 5px; top: 5px; background: none; border: none; color: #ff4757; cursor: pointer; font-size: 12px; z-index: 3; display: none; }
-        .category-item:hover .del-cat-btn { display: block; }
+        .edit-cat-btn { position: absolute; left: 5px; top: 5px; background: none; border: none; color: #4a90e2; cursor: pointer; font-size: 12px; z-index: 3; display: none; }
+        .category-item:hover .del-cat-btn, .category-item:hover .edit-cat-btn { display: block; }
         
         .add-category-box { border: 1px solid #000080; padding: 10px; background: white; }
         .add-category-box input { width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ddd; box-sizing: border-box; }
         .add-category-box button { width: 100%; padding: 8px; background: #eee; border: 1px solid #ddd; cursor: pointer; }
 
-        /* Content Area */
         .content { flex-grow: 1; min-width: 0; }
         .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         
@@ -126,13 +99,13 @@
         
         .btn-edit-mode { padding: 8px 15px; background: white; border: 2px solid var(--edit-color); color: var(--edit-color); border-radius: 5px; cursor: pointer; font-weight: bold; }
         .btn-edit-mode:hover { background: var(--edit-color); color: white; }
+        .btn-setting { padding: 8px 15px; background: #34495e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
 
         .move-toolbar { display: none; background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; align-items: center; justify-content: space-between; gap: 15px; border: 1px solid #ffeeba; color: #856404; flex-wrap: wrap; }
         .move-toolbar select { padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; }
         .btn-confirm-move { padding: 6px 15px; background: var(--edit-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-cancel-move { padding: 6px 15px; background: #ddd; color: #333; border: none; border-radius: 4px; cursor: pointer; }
 
-        /* Product Grid */
         .product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
         @media(max-width: 1024px) { .product-grid { grid-template-columns: repeat(3, 1fr); } }
 
@@ -143,6 +116,9 @@
         .product-title { font-size: 16px; font-weight: bold; margin-bottom: 5px; pointer-events: none; }
         .product-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 5px; pointer-events: none; }
         .product-price { font-size: 14px; font-weight: bold; color: var(--warning-color); margin-bottom: 5px; pointer-events: none; }
+        .product-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 5px; }
+        .product-tag { font-size: 11px; background: #e6f7ff; color: var(--primary-color); padding: 2px 6px; border-radius: 10px; }
+        .product-notes { font-size: 12px; color: #555; background: #f9f9f9; padding: 5px; border-radius: 4px; max-height: 50px; overflow-y: auto; text-align: left; margin-bottom: 5px; pointer-events: auto; cursor: text; }
         
         .action-btns { position: absolute; top: 10px; right: 10px; display: none; gap: 4px; z-index: 10; }
         .product-card:hover .action-btns { display: flex; }
@@ -151,14 +127,12 @@
         .btn-del-prod { background: rgba(255, 71, 87, 0.1); color: #ff4757; }
         .btn-edit-prod { background: rgba(74, 144, 226, 0.1); color: #4a90e2; }
         
-        /* 數量與加入清單區塊 */
         .cart-action { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #eee; flex-wrap: wrap; }
         .qty-input { width: 50px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 14px; cursor: text; }
         .check-container { display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; font-size: 14px; margin: 0;}
         .check-container input { width: 18px; height: 18px; cursor: pointer; margin: 0; }
         .check-container.edit-mode-check { color: var(--edit-color); font-weight: bold; padding-top:15px; border-top: 1px dashed var(--edit-color); margin-top: 10px; }
 
-        /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
         .modal-content { background: white; width: 900px; max-height: 90vh; border-radius: 10px; padding: 30px; overflow-y: auto; position: relative; }
         .modal-content.small { width: 450px; max-width: 100%; }
@@ -166,10 +140,14 @@
         
         .form-group { margin-bottom: 15px; text-align: left; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; cursor: pointer; }
-        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="date"], .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
         .btn-submit { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 10px; font-weight: bold; }
         
-        /* Export Area */
+        /* 排序設定列表 */
+        .sortable-list { list-style: none; padding: 0; margin-bottom: 15px; }
+        .sortable-item { background: #f9f9f9; border: 1px solid #ddd; margin-bottom: 5px; padding: 10px; border-radius: 4px; cursor: grab; display: flex; align-items: center; justify-content: space-between; }
+        .sortable-item:active { cursor: grabbing; background: #eef2f5; }
+
         .table-wrapper { width: 100%; overflow-x: auto; background: white; }
         #export-area { background: white; padding: 20px; min-width: 700px; }
         .export-header { text-align: center; margin-bottom: 20px; display: none; }
@@ -183,7 +161,6 @@
         .remove-btn { color: #ff4757; cursor: pointer; text-decoration: underline; font-size: 13px; padding: 5px; }
         .empty-state { text-align: center; padding: 50px; color: #999; grid-column: 1/-1; }
         
-        /* 匯出表格欄位隱控開關樣式 */
         #export-area.hide-img .col-img { display: none !important; }
         #export-area.hide-brand .col-brand { display: none !important; }
         #export-area.hide-cap .col-cap { display: none !important; }
@@ -199,7 +176,6 @@
         .preview-item { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid #eee; border-radius: 5px; background: #fff; }
         .preview-item img { width: 40px; height: 40px; object-fit: contain; background: white; }
 
-        /* Toast 提示框樣式 */
         #toastNotification {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.85); color: white; padding: 12px 24px;
@@ -207,128 +183,64 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: opacity 0.3s ease;
         }
 
-        /* 自訂右鍵選單 */
         #customContextMenu {
             display: none; position: fixed; background: white; border: 1px solid #ccc; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2000; border-radius: 6px; padding: 6px 0; min-width: 140px;
         }
         .context-menu-item { padding: 8px 16px; cursor: pointer; font-size: 14px; color: #333; }
         .context-menu-item:hover { background: #f0f0f0; }
 
-        /* 大量新增表格輸入欄位樣式 */
-        .bulk-row input[type="text"], .bulk-row input[type="number"], .bulk-row select {
-            width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none; background: white;
+        .bulk-row input[type="text"], .bulk-row input[type="number"], .bulk-row input[type="date"], .bulk-row select, .bulk-row textarea,
+        .batch-edit-row input[type="text"], .batch-edit-row input[type="number"], .batch-edit-row input[type="date"], .batch-edit-row select, .batch-edit-row textarea {
+            width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none; background: white; box-sizing: border-box;
         }
-        .bulk-row input:focus, .bulk-row select:focus { border-color: var(--primary-color); }
+        .bulk-row input:focus, .bulk-row select:focus, .bulk-row textarea:focus,
+        .batch-edit-row input:focus, .batch-edit-row select:focus, .batch-edit-row textarea:focus { border-color: var(--primary-color); }
 
-        /* 桌面版與手機版的按鈕顯示控制 */
         .desktop-only-btn { display: inline-block; }
         .mobile-collapse-bar { display: none; }
 
-        /* =========================================
-           📱 手機版響應式專用排版 (依指定順序切齊擺放)
-           ========================================= */
         @media (max-width: 768px) {
             body:not(.force-desktop) header { padding: 12px; gap: 8px; }
-            
-            /* 將 header-top 設定為 2 欄的 Grid 網格系統以完美切齊 */
-            body:not(.force-desktop) .header-top {
-                display: grid !important;
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-                align-items: center;
-                width: 100%;
-            }
-            
-            /* 讓子容器內容成為網格的直接元素 */
-            body:not(.force-desktop) .logo-area,
-            body:not(.force-desktop) .logo-area h1,
-            body:not(.force-desktop) .header-controls {
-                display: contents !important;
-            }
+            body:not(.force-desktop) .header-top { display: grid !important; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; width: 100%; }
+            body:not(.force-desktop) .logo-area, body:not(.force-desktop) .logo-area h1, body:not(.force-desktop) .header-controls { display: contents !important; }
 
-            /* --- 手機版排列順序與對齊 --- */
-            
-            /* 第 1 列: 網頁名稱 | 切換電腦版 */
             body:not(.force-desktop) #siteTitle { grid-column: 1 / 2; grid-row: 1; font-size: 20px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             body:not(.force-desktop) #viewToggleBtn { grid-column: 2 / 3; grid-row: 1; width: 100% !important; padding: 10px 0 !important; font-size: 13px !important; border-radius: 20px !important; text-align: center; margin: 0 !important;}
+            body:not(.force-desktop) .btn-copy-link { grid-column: 1 / 2; grid-row: 2; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; display: block !important; }
+            body:not(.force-desktop) .btn-reset-default { grid-column: 2 / 3; grid-row: 2; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; display: block !important; }
+            body:not(.force-desktop) .btn-backup { grid-column: 1 / 2; grid-row: 3; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; display: block !important; }
+            body:not(.force-desktop) .btn-restore { grid-column: 2 / 3; grid-row: 3; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; display: block !important; }
             
-            /* 第 2 列: 複製連結 | 一鍵預設 */
-            body:not(.force-desktop) .btn-copy-link { grid-column: 1 / 2; grid-row: 2; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block !important; }
-            body:not(.force-desktop) .btn-reset-default { grid-column: 2 / 3; grid-row: 2; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block !important; }
+            body:not(.force-desktop) .search-container { grid-column: 1 / 3; grid-row: 4; width: 100% !important; box-sizing: border-box; margin: 0 !important; }
             
-            /* 第 3 列: 備份資料 | 還原資料 */
-            body:not(.force-desktop) .btn-backup { grid-column: 1 / 2; grid-row: 3; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block !important; }
-            body:not(.force-desktop) .btn-restore { grid-column: 2 / 3; grid-row: 3; width: 100% !important; padding: 10px 4px !important; font-size: 11px !important; border-radius: 20px !important; text-align: center; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block !important; }
-            
-            /* 第 4 列: 搜尋商品名稱 (全寬) */
-            body:not(.force-desktop) #searchInput { grid-column: 1 / 3; grid-row: 4; width: 100% !important; padding: 12px 15px !important; border-radius: 25px !important; box-sizing: border-box; margin: 0 !important; }
-            
-            /* 第 5 列: 預算 (全寬) */
             body:not(.force-desktop) .budget-area { grid-column: 1 / 3; grid-row: 5; width: 100% !important; justify-content: space-between !important; padding: 10px 15px !important; box-sizing: border-box; margin: 0 !important; }
             body:not(.force-desktop) .budget-area input { width: 90px !important; text-align: center; }
-            
-            /* 第 6 列: 新增商品 | 檢視/匯出 */
             body:not(.force-desktop) .btn-add { grid-column: 1 / 2; grid-row: 6; width: 100% !important; padding: 12px 0 !important; font-size: 14px !important; border-radius: 25px !important; text-align: center; margin: 0 !important; }
             body:not(.force-desktop) .btn-cart-modal { grid-column: 2 / 3; grid-row: 6; width: 100% !important; padding: 12px 0 !important; font-size: 14px !important; border-radius: 25px !important; text-align: center; margin: 0 !important; }
 
-            /* 隱藏不需要的元素 */
-            body:not(.force-desktop) .logo-area p,
-            body:not(.force-desktop) .btn-bulk,
-            body:not(.force-desktop) .desktop-only-element:not(.btn-copy-link):not(.btn-reset-default):not(.btn-backup):not(.btn-restore) {
-                display: none !important;
-            }
+            body:not(.force-desktop) .logo-area p, body:not(.force-desktop) .btn-bulk, body:not(.force-desktop) .desktop-only-element:not(.btn-copy-link):not(.btn-reset-default):not(.btn-backup):not(.btn-restore) { display: none !important; }
+            body:not(.force-desktop) .mobile-collapse-bar { display: block; text-align: center; background: #eef2f5; color: var(--primary-color); padding: 8px; border-radius: 10px; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+            body:not(.force-desktop) header.collapsed .header-top { display: none !important; }
 
-            /* 手機版折疊開關 (預設顯示) */
-            body:not(.force-desktop) .mobile-collapse-bar {
-                display: block;
-                text-align: center;
-                background: #eef2f5;
-                color: var(--primary-color);
-                padding: 8px;
-                border-radius: 10px;
-                font-size: 12px;
-                font-weight: bold;
-                cursor: pointer;
-                margin-top: 5px;
-            }
-
-            /* 當 header 被折疊時，隱藏 header-top 內容 */
-            body:not(.force-desktop) header.collapsed .header-top {
-                display: none !important;
-            }
-
-            /* 手機版：左側獨立滾動導覽列與雙欄商品網格 */
             body:not(.force-desktop) .container { flex-direction: row; align-items: flex-start; padding: 0 5px; gap: 8px; margin-top: 10px; }
-            
-            body:not(.force-desktop) .sidebar { 
-                width: 90px; 
-                flex-shrink: 0; 
-                padding-right: 0; /* 手機版不需要預留尖尖空間 */
-            }
-            
-            /* 針對手機版批次刪除與全部刪除分類按鈕變成垂直排列 */
+            body:not(.force-desktop) .sidebar { width: 90px; flex-shrink: 0; padding-right: 0; }
             body:not(.force-desktop) .sidebar > div:first-child { flex-direction: column !important; }
             body:not(.force-desktop) .sidebar > div:first-child button { border-right: none !important; border-bottom: 1px solid #fff; padding: 8px 2px !important; font-size: 11px !important; }
-            
             body:not(.force-desktop) .category-list { display: flex; flex-direction: column; border: 1px solid #000080; border-bottom: none; width: 100%; }
             body:not(.force-desktop) .category-btn { padding: 12px 4px; font-size: 14px; border-right: none; }
             body:not(.force-desktop) .category-btn.active::after, body:not(.force-desktop) .category-btn.active::before { display: none; }
             body:not(.force-desktop) .del-cat-btn { display: block; position: absolute; right: 2px; top: 2px; background: rgba(255, 255, 255, 0.9); border-radius: 50%; width: 20px; height: 20px; font-size: 10px; line-height: 20px; text-align: center; }
-            
+            body:not(.force-desktop) .edit-cat-btn { display: block; position: absolute; left: 2px; top: 2px; background: rgba(255, 255, 255, 0.9); border-radius: 50%; width: 20px; height: 20px; font-size: 10px; line-height: 20px; text-align: center; }
             body:not(.force-desktop) .add-category-box { display: flex; flex-direction: column; padding: 6px; width: 100%; }
-            body:not(.force-desktop) .add-category-box input { width: 100%; padding: 6px 4px; font-size: 12px; margin-bottom: 5px; box-sizing: border-box; }
-            body:not(.force-desktop) .add-category-box button { width: 100%; padding: 6px 4px; font-size: 12px; box-sizing: border-box; }
-            
+            body:not(.force-desktop) .add-category-box input, body:not(.force-desktop) .add-category-box button { width: 100%; padding: 6px 4px; font-size: 12px; margin-bottom: 5px; box-sizing: border-box; }
             body:not(.force-desktop) .content-header { flex-direction: column; align-items: stretch; gap: 10px; }
             body:not(.force-desktop) .filters { display: flex; flex-direction: column; width: 100%; gap: 8px; }
             body:not(.force-desktop) .filters select { width: 100%; padding: 12px; font-size: 15px; }
             body:not(.force-desktop) .price-filter { width: 100%; justify-content: space-between; padding: 10px 12px; }
             body:not(.force-desktop) .price-filter input { width: 42%; padding: 8px; font-size: 15px; }
-            body:not(.force-desktop) .btn-edit-mode { width: 100%; text-align: center; padding: 12px; font-size: 15px; }
+            body:not(.force-desktop) .btn-edit-mode, body:not(.force-desktop) .btn-setting { width: 100%; text-align: center; padding: 12px; font-size: 15px; }
             body:not(.force-desktop) .move-toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
             body:not(.force-desktop) .move-toolbar select { width: 100%; padding: 10px; }
-            
-            /* 強制手機版為雙欄商品排版 */
             body:not(.force-desktop) .product-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
             body:not(.force-desktop) .product-card { padding: 35px 8px 10px 8px; }
             body:not(.force-desktop) .product-image { height: 100px; margin-bottom: 10px; }
@@ -340,7 +252,6 @@
             body:not(.force-desktop) .cart-action { gap: 5px; }
             body:not(.force-desktop) .btn-add-freq, body:not(.force-desktop) .btn-edit-prod, body:not(.force-desktop) .btn-del-prod { width: 22px; height: 22px; font-size: 10px; }
             body:not(.force-desktop) .action-btns { display: flex; }
-            
             body:not(.force-desktop) .modal-content { width: 96%; padding: 20px 12px; max-height: 88vh; }
             body:not(.force-desktop) .modal-close { top: 12px; right: 15px; font-size: 32px; }
             body:not(.force-desktop) #cartModal .modal-content > div:nth-child(3) { flex-direction: column; gap: 12px; align-items: stretch !important; }
@@ -364,7 +275,6 @@
         <div class="logo-area">
             <h1>
                 <span id="siteTitle" class="editable-text" contenteditable="true" onblur="saveHeaderCustom()" title="點擊即可更改標題">待購清單</span>
-                <!-- 資料共享與備份還原及一鍵預設按鈕組 -->
                 <button class="btn-action desktop-only-element btn-copy-link" style="padding: 2px 8px; font-size: 12px; font-weight: normal; border-radius: 12px; vertical-align: middle; background-color: #8e44ad;" onclick="copyDataLink()" title="複製保有個人資料的連結">🔗 複製個人資料連結</button>
                 <button class="btn-action desktop-only-element btn-reset-default" style="padding: 2px 8px; font-size: 12px; font-weight: normal; border-radius: 12px; vertical-align: middle; background-color: #c0392b;" onclick="resetToDefaultPage()" title="恢復為預設網頁（清除所有新增與自訂內容）">🔄 一鍵預設</button>
                 <button class="btn-action desktop-only-element btn-backup" style="padding: 2px 8px; font-size: 12px; font-weight: normal; border-radius: 12px; vertical-align: middle; background-color: #34495e;" onclick="exportJsonData()" title="將所有設定與商品打包成備份檔案下載">💾 備份資料</button>
@@ -374,7 +284,13 @@
             <p><span id="siteSubtitle" class="editable-text" contenteditable="true" onblur="saveHeaderCustom()" title="點擊即可更改網頁介紹">方便記錄和麻煩他人代買</span></p>
         </div>
         <div class="header-controls">
-            <input type="text" id="searchInput" class="search-box" placeholder="搜尋商品名稱...">
+            
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-box" placeholder="搜尋名稱或#標籤">
+                <span style="color:#ddd; margin:0 5px;">|</span>
+                <input type="date" id="searchDateInput" class="search-date-picker" onchange="updateProductView()" title="按指定日期過濾商品">
+                <div id="tagSuggestions"></div>
+            </div>
             
             <div class="budget-area" id="budgetAreaContainer">
                 預算: $ <input type="number" id="budgetInput" placeholder="無限制" min="0" oninput="checkBudget()">
@@ -384,17 +300,14 @@
             <button class="btn-action btn-bulk" onclick="openBulkModal()">+ 大量新增</button>
             <button class="btn-action btn-cart-modal" onclick="openCartModal()">🛒 檢視 / 匯出 (<span id="cartCount">0</span>)</button>
             
-            <!-- 一鍵切換電腦版按鈕 -->
             <button class="btn-action" id="viewToggleBtn" style="background: #6c757d;" onclick="toggleDesktopMode()">💻 切換電腦版</button>
         </div>
     </div>
     
-    <!-- 手機版向上合起來切換列 -->
     <div class="mobile-collapse-bar" id="mobileCollapseBar" onclick="toggleMobileHeader()">
         <span id="mobileCollapseText">▲ 收起上方選單</span>
     </div>
 
-    <!-- 常買清單列 -->
     <div class="freq-bar" id="freqBar">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%;">
             <span class="freq-bar-title">⭐ <span id="freqBarTitleText" class="editable-text" contenteditable="true" onblur="saveFreqBarTitleCustom()" title="點擊即可更改常買清單標題">常買清單</span>：</span>
@@ -410,7 +323,6 @@
 
 <div class="container">
     <div class="sidebar">
-        <!-- 分類區塊上方兩個按鈕，完美切齊下方分類選單寬度 -->
         <div style="display: flex; width: 100%;">
             <button onclick="openBatchDeleteCategoryModal()" style="flex: 1; padding: 8px 4px; background: #e67e22; color: white; border: 1px solid #e67e22; border-bottom: none; border-right: 1px solid #fff; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center;" title="批次選擇刪除自定義分類">🗑️ 批次刪除</button>
             <button onclick="deleteAllCustomCategories()" style="flex: 1; padding: 8px 4px; background: #ff4757; color: white; border: 1px solid #ff4757; border-bottom: none; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center;" title="刪除全部自定義分類">🗑️ 全部刪除</button>
@@ -432,15 +344,21 @@
                     💲 <input type="number" id="minPriceF" placeholder="最低價" min="0"> ~ 
                     <input type="number" id="maxPriceF" placeholder="最高價" min="0">
                 </div>
+                <select id="dateSortSelect" onchange="toggleDateSort()" style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 5px; outline: none; cursor: pointer; font-weight:bold;">
+                    <option value="">預設排序</option>
+                    <option value="desc">日期近的在前</option>
+                    <option value="asc">日期遠的在前</option>
+                </select>
             </div>
-            <!-- 批次刪除與批次移動按鈕群組 -->
+            
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <button class="btn-edit-mode" id="btnToggleDelete" onclick="toggleDeleteMode()" style="border-color: #ff4757; color: #ff4757;">🗑️ 批次刪除商品</button>
-                <button class="btn-edit-mode" id="btnToggleEdit" onclick="toggleEditMode()">✏️ 批次移動商品</button>
+                <button class="btn-setting" onclick="openFieldSortModal()" title="調整商品卡片欄位順序">⚙️ 調整順序</button>
+                <button class="btn-edit-mode desktop-only-btn" onclick="openBatchEditModal()" style="border-color: #27ae60; color: #27ae60;">✏️ 批次修改</button>
+                <button class="btn-edit-mode" id="btnToggleEdit" onclick="toggleEditMode()">✏️ 批次移動</button>
+                <button class="btn-edit-mode" id="btnToggleDelete" onclick="toggleDeleteMode()" style="border-color: #ff4757; color: #ff4757;">🗑️ 批次刪除</button>
             </div>
         </div>
 
-        <!-- 批次移動工具列 -->
         <div class="move-toolbar" id="moveToolbar">
             <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                 <span>已選取 <strong id="moveCount">0</strong> 項商品，請選擇移動目標：</span>
@@ -455,7 +373,6 @@
             </div>
         </div>
 
-        <!-- 批次刪除工具列 -->
         <div class="move-toolbar" id="deleteToolbar" style="background: #ffe5e5; border-color: #ffcccc; color: #c0392b;">
             <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                 <span>已選取 <strong id="deleteCount">0</strong> 項商品，確定要永久刪除選中的商品嗎？</span>
@@ -473,6 +390,29 @@
     </div>
 </div>
 
+<!-- 分類重新命名彈窗 -->
+<div class="modal-overlay" id="renameCategoryModal">
+    <div class="modal-content small" style="width: 350px;">
+        <span class="modal-close" onclick="closeModal('renameCategoryModal')">&times;</span>
+        <h2 style="margin-bottom: 20px; text-align: center;">修改分類名稱</h2>
+        <div class="form-group">
+            <input type="text" id="renameCategoryInput" placeholder="輸入新分類名稱" onkeydown="if(event.key==='Enter') confirmRenameCategory()">
+        </div>
+        <button class="btn-submit" onclick="confirmRenameCategory()">確認</button>
+    </div>
+</div>
+
+<!-- 欄位排序設定彈窗 -->
+<div class="modal-overlay" id="fieldSortModal">
+    <div class="modal-content small">
+        <span class="modal-close" onclick="closeModal('fieldSortModal')">&times;</span>
+        <h2 style="margin-bottom: 20px; text-align: center;">自訂欄位顯示順序</h2>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">長按拖曳以調整商品卡片上欄位的顯示先後順序（圖片與名稱固定在最上方）。</p>
+        <ul class="sortable-list" id="fieldSortList"></ul>
+        <button class="btn-submit" onclick="saveFieldOrder()">儲存排序</button>
+    </div>
+</div>
+
 <!-- 新增/編輯商品彈窗 -->
 <div class="modal-overlay" id="productModal">
     <div class="modal-content small">
@@ -485,7 +425,7 @@
         </div>
         <div class="form-group">
             <label>商品分類</label>
-            <select id="prodCategory"></select>
+            <select id="prodCategory" onfocus="this.dataset.oldValue = this.value" onchange="handleCategorySelectChange(this)"></select>
         </div>
         <div class="form-group">
             <label>品名 (必填)</label>
@@ -500,6 +440,20 @@
             <label>容量/規格 (選填)</label>
             <input type="text" id="prodCapacity" placeholder="例如: 3顆裝">
         </div>
+        <div class="form-group">
+            <label>價格 (選填)</label>
+            <input type="number" id="prodPrice" placeholder="例如: 100" min="0">
+        </div>
+        <div class="form-group" style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+                <label>日期標題 (選填)</label>
+                <input type="text" id="prodDateTitle" placeholder="預設: 日期">
+            </div>
+            <div style="flex: 1;">
+                <label>日期 (選填)</label>
+                <input type="date" id="prodDate" placeholder="yyyy/mm/dd">
+            </div>
+        </div>
         <div class="form-group" style="display: flex; gap: 10px;">
             <div style="flex: 1;">
                 <label>自定義標題 (選填)</label>
@@ -511,8 +465,12 @@
             </div>
         </div>
         <div class="form-group">
-            <label>價格 (選填)</label>
-            <input type="number" id="prodPrice" placeholder="例如: 100" min="0">
+            <label>標籤 (選填，最多3個)</label>
+            <input type="text" id="prodTags" placeholder="用逗號分隔，例如: 特價,生鮮">
+        </div>
+        <div class="form-group">
+            <label>備註 (選填，不限字數)</label>
+            <textarea id="prodNotes" placeholder="輸入備註事項..." style="height: 80px; resize: vertical;"></textarea>
         </div>
         
         <button class="btn-submit" onclick="saveProduct()">儲存商品</button>
@@ -521,7 +479,7 @@
 
 <!-- 大量新增商品彈窗 (Excel 格式) -->
 <div class="modal-overlay" id="bulkModal">
-    <div class="modal-content" style="width: 1100px;">
+    <div class="modal-content" style="width: 1400px; max-width: 95%;">
         <span class="modal-close" onclick="closeModal('bulkModal')">&times;</span>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <h2>大量新增商品 (Excel 表格格式)</h2>
@@ -530,23 +488,73 @@
             </div>
         </div>
         <div class="table-wrapper" style="max-height: 450px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px;">
-            <table class="export-table" style="min-width: 950px; margin: 0;">
+            <table class="export-table" style="min-width: 1400px; margin: 0;">
                 <thead>
                     <tr>
-                        <th>圖片選擇</th>
-                        <th>分類</th>
-                        <th>品名 (必填)</th>
-                        <th>品牌</th>
-                        <th>容量/規格</th>
-                        <th>自定義標題</th>
-                        <th>自定義內容</th>
-                        <th>價格</th>
+                        <th style="width:90px;">圖片選擇</th>
+                        <th style="width:100px;">分類</th>
+                        <th style="width:120px;">品名(必填)</th>
+                        <th style="width:100px;">品牌</th>
+                        <th style="width:100px;">容量/規格</th>
+                        <th style="width:80px;">價格</th>
+                        <th style="width:100px;">日期標題</th>
+                        <th style="width:120px;">日期</th>
+                        <th style="width:100px;">自訂標題</th>
+                        <th style="width:100px;">自訂內容</th>
+                        <th style="width:120px;">標籤(逗號分隔)</th>
+                        <th>備註</th>
                     </tr>
                 </thead>
                 <tbody id="bulkTableBody"></tbody>
             </table>
         </div>
         <button class="btn-submit" style="margin-top: 20px;" onclick="saveBulkProducts()">確認批量新增</button>
+    </div>
+</div>
+
+<!-- 批次修改商品彈窗 (Excel 格式) -->
+<div class="modal-overlay" id="batchEditModal">
+    <div class="modal-content" style="width: 1400px; max-width: 95%;">
+        <span class="modal-close" onclick="closeModal('batchEditModal')">&times;</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h2>批次修改商品</h2>
+            <span style="font-size: 13px; color: #666;">（目前僅顯示符合搜尋及篩選條件的商品）</span>
+        </div>
+        <div class="table-wrapper" style="max-height: 450px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px;">
+            <table class="export-table" style="min-width: 1400px; margin: 0;">
+                <thead>
+                    <tr>
+                        <th style="width:90px;">圖片更換</th>
+                        <th style="width:100px;">分類</th>
+                        <th style="width:120px;">品名</th>
+                        <th style="width:100px;">品牌</th>
+                        <th style="width:100px;">容量/規格</th>
+                        <th style="width:80px;">價格</th>
+                        <th style="width:100px;">日期標題</th>
+                        <th style="width:120px;">日期</th>
+                        <th style="width:100px;">自訂標題</th>
+                        <th style="width:100px;">自訂內容</th>
+                        <th style="width:120px;">標籤(逗號分隔)</th>
+                        <th>備註</th>
+                    </tr>
+                </thead>
+                <tbody id="batchEditTableBody"></tbody>
+            </table>
+        </div>
+        <button class="btn-submit" style="margin-top: 20px;" onclick="saveBatchEdit()">儲存所有修改</button>
+    </div>
+</div>
+
+<!-- 還原資料選項彈窗 -->
+<div class="modal-overlay" id="importConfirmModal">
+    <div class="modal-content small" style="width: 450px;">
+        <span class="modal-close" onclick="closeModal('importConfirmModal')">&times;</span>
+        <h2 style="margin-bottom: 15px;">還原資料</h2>
+        <p style="font-size:14px; color:#666; margin-bottom:20px;">偵測到備份檔案，請問您要「添加資料」還是「全部覆蓋」？</p>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn-submit" style="margin:0; background:#27ae60;" onclick="executeImport('append')">➕ 添加資料 (保留現有，加入新資料並合併相同商品)</button>
+            <button class="btn-submit" style="margin:0; background:#c0392b;" onclick="executeImport('overwrite')">⚠️ 全部覆蓋 (清除現有，完全取代)</button>
+        </div>
     </div>
 </div>
 
@@ -557,12 +565,10 @@
         <h2 id="cartModalTitle">待購清單確認</h2>
         <p style="margin-bottom: 10px; color: #777; font-size: 13px;">確認無誤後點擊匯出。表格可左右滑動查看。</p>
         
-        <!-- 上方控制列（左側功能，右側總金額） -->
         <div style="display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <button class="btn-action" style="background: var(--edit-color);" onclick="saveAsFrequentList()">⭐ 設為常買</button>
+                <button class="btn-action" style="background: var(--edit-color);" onclick="saveAsFrequentList()">⭐ 設為常駐</button>
                 <button class="btn-action" style="background: #e84118;" onclick="clearCart()">🗑️ 清空全部</button>
-                <!-- 匯出欄位選擇（自動記憶設定） -->
                 <div style="display:flex; gap: 8px; align-items: center; flex-wrap: wrap; background:#e6f7ff; padding:6px 10px; border-radius:5px; border:1px solid #91d5ff; font-size: 13px; font-weight: bold;">
                     <span>欄位選擇:</span>
                     <label style="cursor:pointer;"><input type="checkbox" id="colImgChk" checked onchange="updateExportColumns()"> 圖片</label>
@@ -603,7 +609,6 @@
             </div>
         </div>
 
-        <!-- 表格下方按鈕列（依序為：一鍵複製、其他分享、匯出 JPG、匯出 PDF） -->
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
             <button class="btn-action desktop-only-btn" style="background: #ff4757;" onclick="shareToClipboard()">📋 一鍵複製</button>
             <button class="btn-action" style="background: #27ae60;" onclick="shareToNative()">📤 其他分享</button>
@@ -618,25 +623,21 @@
     <div class="modal-content small" style="width: 480px;">
         <span class="modal-close" onclick="closeModal('freqPreviewModal')">&times;</span>
         <h2 style="margin-bottom: 15px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;" id="freqPreviewTitle">常買清單</h2>
-        
         <p style="font-size:13px; color:#666; margin-bottom:10px;">您可以修改清單名稱、調整數量或刪除項目：</p>
-        
-        <!-- 清單內容列表 -->
         <div id="freqPreviewList"></div>
-
         <div style="display:flex; gap:10px; margin-top: 20px; flex-wrap:wrap;">
             <button class="btn-submit" style="flex: 1; margin-top:0;" onclick="importFrequentList()">✅ 一鍵匯入至待購清單</button>
-            <button class="btn-submit" style="background:#ff4757; width:auto; margin-top:0;" onclick="deleteFrequentList()">🗑️ 刪除此常買設定</button>
+            <button class="btn-submit" style="background:#ff4757; width:auto; margin-top:0;" onclick="deleteFrequentList()">🗑️ 刪除此設定</button>
         </div>
     </div>
 </div>
 
-<!-- 批次刪除常買清單彈窗 -->
+<!-- 批次刪除彈窗 -->
 <div class="modal-overlay" id="batchDeleteFreqModal">
     <div class="modal-content small" style="width: 450px;">
         <span class="modal-close" onclick="closeModal('batchDeleteFreqModal')">&times;</span>
         <h2 style="margin-bottom: 15px;" id="batchDelModalTitle">批次刪除常買清單</h2>
-        <p style="font-size:13px; color:#666; margin-bottom:15px;">請勾選想要刪除的常買清單：</p>
+        <p style="font-size:13px; color:#666; margin-bottom:15px;">請勾選想要刪除的項目：</p>
         <div id="batchDeleteFreqListContainer" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; padding: 10px; background: white; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px;"></div>
         <div style="display:flex; gap: 10px;">
             <button class="btn-submit" style="background: #ff4757; margin-top:0;" onclick="executeBatchDeleteFreq()">確認刪除選定項目</button>
@@ -645,7 +646,6 @@
     </div>
 </div>
 
-<!-- 批次刪除分類彈窗 -->
 <div class="modal-overlay" id="batchDeleteCategoryModal">
     <div class="modal-content small" style="width: 450px;">
         <span class="modal-close" onclick="closeModal('batchDeleteCategoryModal')">&times;</span>
@@ -659,48 +659,58 @@
     </div>
 </div>
 
-<!-- 自訂右鍵選單 (複製與貼上) -->
 <div id="customContextMenu">
     <div class="context-menu-item" id="menuCopy" onclick="contextCopyProduct()">📋 複製商品</div>
     <div class="context-menu-item" id="menuPaste" onclick="contextPasteProduct()">📄 貼上商品</div>
 </div>
 
-<!-- 提示框 Toast -->
 <div id="toastNotification"></div>
 
 <script>
     const fallbackImage = `data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='16' fill='%23999'%3E無圖片%3C/text%3E%3C/svg%3E`;
 
-    // 智慧來源辨識：檢測是否為透過通訊軟體內建瀏覽器開啟的連結
     const ua = navigator.userAgent || '';
     const isInApp = /Line|FBAN|FBAV|Instagram|MicroMessenger|WebView/i.test(ua);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    
     const canPersist = !isInApp || isStandalone;
+    
+    // 獨立儲存空間前綴設定
+    const sp = isStandalone ? 'daigou_app_' : 'daigou_';
+    function getStore(key) { return localStorage.getItem(sp + key); }
+    function setStore(key, val) { localStorage.setItem(sp + key, val); }
+    function rmStore(key) { localStorage.removeItem(sp + key); }
 
-    let customCategories = JSON.parse(localStorage.getItem('daigou_custom_cats')) || [];
-    let products = JSON.parse(localStorage.getItem('daigou_prods')) || [];
-    let frequentLists = JSON.parse(localStorage.getItem('daigou_freq_lists')) || [];
+    let allCategories = JSON.parse(getStore('all_cats')) || ['未分類'];
+    let products = JSON.parse(getStore('prods')) || [];
+    let frequentLists = JSON.parse(getStore('freq_lists')) || [];
     let cart = {}; 
     
     let currentCategory = '所有';
     let tempImageBase64 = fallbackImage;
-    let isEditMode = false;     // 批次移動模式
-    let isDeleteMode = false;   // 批次刪除模式
-    let selectedForBatch = new Set(); // 共用選取集合
+    let isEditMode = false;     
+    let isDeleteMode = false;   
+    let selectedForBatch = new Set(); 
     let editingProductId = null;
     let draggedItemType = null;
     let draggedId = null;
     let currentPreviewFreqId = null;
-
-    let isDesktopMode = false; // 預設每次打開連結皆重回原始手機版設定
-
-    // 剪貼簿暫存 (支援滑鼠右鍵與鍵盤 Ctrl+C / Ctrl+V 互通)
+    let pendingImportData = null; 
+    let currentRenamingCat = null;
+    
+    let isDesktopMode = false;
     let clipboardProduct = null;
     let activeContextMenuProductId = null;
     let hoveredProductId = null;
+    
+    const defaultFieldOrder = ['brand', 'capacity', 'custom', 'price', 'date', 'tags', 'notes'];
+    let fieldOrder = JSON.parse(getStore('field_order')) || defaultFieldOrder;
+    let draggedField = null;
 
-    // 動態更新側邊欄固定位置
+    const fieldLabels = {
+        'brand': '品牌', 'capacity': '容量/規格', 'custom': '自定義標題與內容',
+        'price': '價格', 'date': '日期', 'tags': '標籤', 'notes': '備註'
+    };
+
     function updateSidebarSticky() {
         const header = document.querySelector('header');
         const sidebar = document.querySelector('.sidebar');
@@ -713,50 +723,49 @@
     window.addEventListener('resize', updateSidebarSticky);
 
     function init() {
-        // 優先檢查網址 Hash 是否帶有資料傳遞 (#data=...)
         const hash = window.location.hash;
         if (hash && hash.startsWith('#data=')) {
             try {
                 const encoded = hash.substring(6);
                 const jsonStr = decodeURIComponent(atob(encoded));
                 const data = JSON.parse(jsonStr);
-                if (data.customCategories) customCategories = data.customCategories;
+                
+                if(data.customCategories) {
+                    allCategories = ['未分類'];
+                    data.customCategories.forEach(c => { if(c !== '未分類') allCategories.push(c); });
+                } else if(data.allCategories) {
+                    allCategories = data.allCategories;
+                }
+                if(!allCategories.includes('未分類')) allCategories.unshift('未分類');
+                
                 if (data.products) products = data.products;
                 if (data.frequentLists) frequentLists = data.frequentLists;
-                if (data.budget) {
-                    document.getElementById('budgetInput').value = data.budget;
-                    localStorage.setItem('daigou_budget', data.budget);
-                }
-                if (data.siteTitle) {
-                    document.getElementById('siteTitle').innerText = data.siteTitle;
-                    localStorage.setItem('daigou_custom_title', data.siteTitle);
-                }
-                if (data.siteSubtitle) {
-                    document.getElementById('siteSubtitle').innerText = data.siteSubtitle;
-                    localStorage.setItem('daigou_custom_subtitle', data.siteSubtitle);
-                }
-                if (data.freqBarTitle) {
-                    document.getElementById('freqBarTitleText').innerText = data.freqBarTitle;
-                    localStorage.setItem('daigou_custom_freq_title', data.freqBarTitle);
-                }
-                saveData(); // 自動寫入本地設備存檔
-            } catch (err) {
-                console.error('Failed to parse share data from URL', err);
+                if (data.budget) { document.getElementById('budgetInput').value = data.budget; setStore('budget', data.budget); }
+                if (data.siteTitle) { document.getElementById('siteTitle').innerText = data.siteTitle; setStore('custom_title', data.siteTitle); }
+                if (data.siteSubtitle) { document.getElementById('siteSubtitle').innerText = data.siteSubtitle; setStore('custom_subtitle', data.siteSubtitle); }
+                if (data.freqBarTitle) { document.getElementById('freqBarTitleText').innerText = data.freqBarTitle; setStore('custom_freq_title', data.freqBarTitle); }
+                saveData(); 
+            } catch (err) { console.error('Failed to parse share data from URL', err); }
+        } else {
+            const oldCustomCats = JSON.parse(localStorage.getItem('daigou_custom_cats'));
+            if(oldCustomCats && !getStore('all_cats')) {
+                allCategories = ['未分類', ...oldCustomCats];
+                setStore('all_cats', JSON.stringify(allCategories));
             }
         }
 
-        const savedBudget = localStorage.getItem('daigou_budget');
-        if (canPersist && savedBudget) {
-            document.getElementById('budgetInput').value = savedBudget;
-        }
+        const savedBudget = getStore('budget');
+        if (canPersist && savedBudget) document.getElementById('budgetInput').value = savedBudget;
 
-        // 載入自訂標題與介紹及常買清單標題
-        const savedTitle = localStorage.getItem('daigou_custom_title');
-        const savedSubtitle = localStorage.getItem('daigou_custom_subtitle');
-        const savedFreqTitle = localStorage.getItem('daigou_custom_freq_title');
+        const savedTitle = getStore('custom_title');
+        const savedSubtitle = getStore('custom_subtitle');
+        const savedFreqTitle = getStore('custom_freq_title');
         if (canPersist && savedTitle) document.getElementById('siteTitle').innerText = savedTitle;
         if (canPersist && savedSubtitle) document.getElementById('siteSubtitle').innerText = savedSubtitle;
         if (canPersist && savedFreqTitle) document.getElementById('freqBarTitleText').innerText = savedFreqTitle;
+
+        const savedDateSort = getStore('date_sort_select');
+        if(document.getElementById('dateSortSelect') && savedDateSort) document.getElementById('dateSortSelect').value = savedDateSort;
 
         updateCartModalTitle();
         updateBatchDeleteFreqButtonState();
@@ -767,7 +776,7 @@
         updateCartDisplay();
         checkBudget();
         
-        document.getElementById('searchInput').addEventListener('input', updateProductView);
+        document.getElementById('searchInput').addEventListener('input', handleSearchInput);
         document.getElementById('brandFilter').addEventListener('change', updateProductView);
         document.getElementById('capacityFilter').addEventListener('change', updateProductView);
         document.getElementById('minPriceF').addEventListener('input', updateProductView);
@@ -776,7 +785,6 @@
         document.getElementById('prodImage').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(event) {
                 const img = new Image();
@@ -787,12 +795,9 @@
                     canvas.width = MAX_WIDTH;
                     canvas.height = img.height * scaleSize;
                     const ctx = canvas.getContext('2d');
-                    
                     ctx.fillStyle = '#FFFFFF';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    
                     tempImageBase64 = canvas.toDataURL('image/jpeg', 0.9);
                 }
                 img.src = event.target.result;
@@ -800,7 +805,6 @@
             reader.readAsDataURL(file);
         });
 
-        // 監聽滑鼠右鍵選單事件
         document.addEventListener('contextmenu', function(e) {
             const card = e.target.closest('.product-card');
             const menu = document.getElementById('customContextMenu');
@@ -812,250 +816,203 @@
                 menu.style.top = e.clientY + 'px';
                 menu.style.left = e.clientX + 'px';
                 menu.style.display = 'block';
-            } else if (e.target.closest('.product-grid') || e.target.closest('.content')) {
-                if (clipboardProduct) {
-                    e.preventDefault();
-                    activeContextMenuProductId = null;
-                    document.getElementById('menuCopy').style.display = 'none';
-                    document.getElementById('menuPaste').style.display = 'block';
-                    menu.style.top = e.clientY + 'px';
-                    menu.style.left = e.clientX + 'px';
-                    menu.style.display = 'block';
-                    return;
-                }
-                menu.style.display = 'none';
             } else {
                 menu.style.display = 'none';
             }
         });
 
-        window.addEventListener('click', function() {
+        window.addEventListener('click', function(e) {
             document.getElementById('customContextMenu').style.display = 'none';
-        });
-
-        // 監聽滑鼠游標停放的商品卡片
-        document.addEventListener('mouseover', function(e) {
-            const card = e.target.closest('.product-card');
-            if (card) {
-                hoveredProductId = card.getAttribute('data-product-id');
+            if(!e.target.closest('#searchInput') && !e.target.closest('#tagSuggestions')) {
+                document.getElementById('tagSuggestions').style.display = 'none';
             }
         });
 
-        // 監聽鍵盤複製 (Ctrl+C) 與貼上 (Ctrl+V) 快捷鍵
+        document.addEventListener('mouseover', function(e) {
+            const card = e.target.closest('.product-card');
+            if (card) hoveredProductId = card.getAttribute('data-product-id');
+        });
+
         document.addEventListener('keydown', function(e) {
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
-
-            if (e.ctrlKey && e.key.toLowerCase() === 'c') {
-                if (hoveredProductId) {
-                    const p = products.find(x => x.id == hoveredProductId);
-                    if (p) {
-                        clipboardProduct = JSON.parse(JSON.stringify(p));
-                        showToast(`已透過快捷鍵複製商品「${p.name}」`);
-                        e.preventDefault();
-                    }
-                }
-            } else if (e.ctrlKey && e.key.toLowerCase() === 'v') {
-                if (clipboardProduct) {
-                    const newProd = {
-                        ...clipboardProduct,
-                        id: Date.now() + Math.floor(Math.random() * 1000),
-                        name: clipboardProduct.name + ' (複製)'
-                    };
-                    products.push(newProd);
-                    triggerUpdate();
-                    showToast(`已透過快捷鍵貼上商品「${newProd.name}」`);
+            if (e.ctrlKey && e.key.toLowerCase() === 'c' && hoveredProductId) {
+                const p = products.find(x => x.id == hoveredProductId);
+                if (p) {
+                    clipboardProduct = JSON.parse(JSON.stringify(p));
+                    showToast(`已複製商品「${p.name}」`);
                     e.preventDefault();
                 }
+            } else if (e.ctrlKey && e.key.toLowerCase() === 'v' && clipboardProduct) {
+                const newProd = { ...clipboardProduct, id: Date.now() + Math.floor(Math.random() * 1000), name: clipboardProduct.name + ' (複製)' };
+                products.push(newProd);
+                triggerUpdate();
+                showToast(`已貼上商品「${newProd.name}」`);
+                e.preventDefault();
             }
         });
         
         setTimeout(updateSidebarSticky, 100);
     }
 
-    // 手機版上方選單收合切換
     let isMobileCollapsed = false;
     function toggleMobileHeader() {
         isMobileCollapsed = !isMobileCollapsed;
         const headerEl = document.querySelector('header');
         const textEl = document.getElementById('mobileCollapseText');
         if (isMobileCollapsed) {
-            headerEl.classList.add('collapsed');
-            textEl.innerText = '▼ 展開上方選單';
+            headerEl.classList.add('collapsed'); textEl.innerText = '▼ 展開上方選單';
         } else {
-            headerEl.classList.remove('collapsed');
-            textEl.innerText = '▲ 收起上方選單';
+            headerEl.classList.remove('collapsed'); textEl.innerText = '▲ 收起上方選單';
         }
         setTimeout(updateSidebarSticky, 50);
     }
 
-    // 建立空的常買清單類別
-    function createEmptyFrequentList() {
-        if (frequentLists.length >= 10) {
-            alert("常買清單最多只能新增 10 個！");
-            return;
+    // 分類建立新選項功能處理
+    function handleCategorySelectChange(selectEl) {
+        if (selectEl.value === '__NEW__') {
+            const newCat = prompt("請輸入新分類名稱：");
+            const cleanCat = newCat ? newCat.trim() : '';
+            if (cleanCat) {
+                if (cleanCat === '所有' || cleanCat === '未分類') {
+                    alert('保留字無法使用。');
+                    selectEl.value = selectEl.dataset.oldValue || '未分類';
+                    return;
+                }
+                if (allCategories.length >= 26 && !allCategories.includes(cleanCat)) {
+                    alert('最多新增 25 個自訂分類！');
+                    selectEl.value = selectEl.dataset.oldValue || '未分類';
+                    return;
+                }
+                if (!allCategories.includes(cleanCat)) {
+                    allCategories.push(cleanCat);
+                    renderCategories();
+                    triggerUpdate();
+                }
+                
+                const modalSelects = document.querySelectorAll('#prodCategory, .bulk-cat, .be-cat');
+                modalSelects.forEach(sel => {
+                    const curVal = sel === selectEl ? cleanCat : (sel.value === '__NEW__' ? '未分類' : sel.value);
+                    sel.innerHTML = allCategories.map(c => `<option value="${c}">${c}</option>`).join('') + `<option value="__NEW__" style="color:var(--primary-color); font-weight:bold;">+ 建立新分類</option>`;
+                    sel.value = curVal;
+                });
+            } else {
+                selectEl.value = selectEl.dataset.oldValue || '未分類';
+            }
+        } else {
+            selectEl.dataset.oldValue = selectEl.value;
         }
+    }
+
+    function createEmptyFrequentList() {
+        if (frequentLists.length >= 10) { alert("常買清單最多只能新增 10 個！"); return; }
         const name = prompt("請為這個新常買清單命名 (例如: 辦公室補貨)：");
         if (!name || name.trim() === "") return;
-
-        frequentLists.push({
-            id: Date.now(),
-            name: name.trim(),
-            items: []
-        });
+        frequentLists.push({ id: Date.now(), name: name.trim(), items: [] });
         triggerUpdate();
         showToast(`已建立常買清單「${name.trim()}」！`);
     }
 
-    // 一鍵預設：清除所有暫存與自訂內容恢復原狀
     function resetToDefaultPage() {
         if (confirm('確定要一鍵恢復為預設網頁嗎？\n這將會清除所有您新增的商品、分類、常買清單與自訂設定！')) {
-            localStorage.removeItem('daigou_custom_cats');
-            localStorage.removeItem('daigou_prods');
-            localStorage.removeItem('daigou_freq_lists');
-            localStorage.removeItem('daigou_budget');
-            localStorage.removeItem('daigou_custom_title');
-            localStorage.removeItem('daigou_custom_subtitle');
-            localStorage.removeItem('daigou_custom_freq_title');
-            localStorage.removeItem('daigou_export_cols');
-            localStorage.removeItem('daigou_desktop_mode');
-
-            if (window.location.hash) {
-                history.replaceState(null, null, window.location.pathname);
-            }
-
+            rmStore('all_cats'); rmStore('prods'); rmStore('freq_lists');
+            rmStore('budget'); rmStore('custom_title'); rmStore('custom_subtitle');
+            rmStore('custom_freq_title'); rmStore('export_cols'); rmStore('desktop_mode');
+            rmStore('date_sort_select'); rmStore('field_order');
+            if (window.location.hash) history.replaceState(null, null, window.location.pathname);
             window.location.href = window.location.pathname;
         }
     }
 
-    // 更新匯出表格欄位顯示狀態（並儲存至 localStorage）
     function updateExportColumns() {
         const area = document.getElementById('export-area');
-        
-        const imgOn = document.getElementById('colImgChk').checked;
-        const brandOn = document.getElementById('colBrandChk').checked;
-        const capOn = document.getElementById('colCapChk').checked;
-        const customOn = document.getElementById('colCustomChk').checked;
-        const priceOn = document.getElementById('colPriceChk').checked;
-        const checkOn = document.getElementById('colCheckChk').checked;
-
-        if (imgOn) area.classList.remove('hide-img'); else area.classList.add('hide-img');
-        if (brandOn) area.classList.remove('hide-brand'); else area.classList.add('hide-brand');
-        if (capOn) area.classList.remove('hide-cap'); else area.classList.add('hide-cap');
-        if (customOn) area.classList.remove('hide-custom'); else area.classList.add('hide-custom');
-        if (priceOn) area.classList.remove('hide-price'); else area.classList.add('hide-price');
-        if (checkOn) area.classList.remove('hide-check'); else area.classList.add('hide-check');
-
-        const colsState = { img: imgOn, brand: brandOn, cap: capOn, custom: customOn, price: priceOn, check: checkOn };
-        localStorage.setItem('daigou_export_cols', JSON.stringify(colsState));
+        const cols = ['Img', 'Brand', 'Cap', 'Custom', 'Price', 'Check'];
+        const state = {};
+        cols.forEach(c => {
+            const el = document.getElementById('col' + c + 'Chk');
+            if(el) {
+                state[c.toLowerCase()] = el.checked;
+                if(el.checked) area.classList.remove('hide-' + c.toLowerCase());
+                else area.classList.add('hide-' + c.toLowerCase());
+            }
+        });
+        setStore('export_cols', JSON.stringify(state));
     }
 
     function loadExportColumns() {
-        const saved = localStorage.getItem('daigou_export_cols');
+        const saved = getStore('export_cols');
         if (saved) {
             try {
                 const cols = JSON.parse(saved);
-                if (document.getElementById('colImgChk')) document.getElementById('colImgChk').checked = cols.img ?? true;
-                if (document.getElementById('colBrandChk')) document.getElementById('colBrandChk').checked = cols.brand ?? true;
-                if (document.getElementById('colCapChk')) document.getElementById('colCapChk').checked = cols.cap ?? true;
-                if (document.getElementById('colCustomChk')) document.getElementById('colCustomChk').checked = cols.custom ?? true;
-                if (document.getElementById('colPriceChk')) document.getElementById('colPriceChk').checked = cols.price ?? true;
-                if (document.getElementById('colCheckChk')) document.getElementById('colCheckChk').checked = cols.check ?? true;
+                ['Img', 'Brand', 'Cap', 'Custom', 'Price', 'Check'].forEach(c => {
+                    const el = document.getElementById('col' + c + 'Chk');
+                    const key = c.toLowerCase();
+                    if(el) el.checked = cols[key] ?? true;
+                });
             } catch(e) {}
         }
         updateExportColumns();
     }
 
-    // 刪除全部自定義分類
     function deleteAllCustomCategories() {
-        if (customCategories.length === 0) {
-            alert('目前沒有自定義分類可刪除！');
-            return;
-        }
+        const customCount = allCategories.filter(c => c !== '未分類').length;
+        if (customCount === 0) { alert('目前沒有自定義分類可刪除！'); return; }
         if (confirm('確定要刪除全部自定義分類嗎？\n這些分類下的所有商品會被移至「未分類」。')) {
-            customCategories = [];
+            allCategories = ['未分類'];
             products.forEach(p => { p.category = '未分類'; });
-            if (currentCategory !== '所有' && currentCategory !== '未分類') {
-                currentCategory = '所有';
-            }
+            if (currentCategory !== '所有' && currentCategory !== '未分類') currentCategory = '所有';
             triggerUpdate();
             showToast('已刪除所有自定義分類！');
         }
     }
 
-    // 打開批次刪除分類彈窗
     function openBatchDeleteCategoryModal() {
-        if (customCategories.length === 0) {
-            alert('目前沒有自定義分類可刪除！');
-            return;
-        }
+        const customCats = allCategories.filter(c => c !== '未分類');
+        if (customCats.length === 0) { alert('目前沒有自定義分類可刪除！'); return; }
         const container = document.getElementById('batchDeleteCategoryListContainer');
-        container.innerHTML = customCategories.map(cat => `
+        container.innerHTML = customCats.map(cat => `
             <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer;">
                 <input type="checkbox" class="batch-cat-chk" value="${cat}" style="width: 16px; height: 16px; cursor: pointer;">
                 <span>${cat}</span>
             </label>
         `).join('');
-
         document.getElementById('batchDeleteCategoryModal').style.display = 'flex';
     }
 
-    // 執行批次刪除分類
     function executeBatchDeleteCategory() {
         const checkboxes = document.querySelectorAll('.batch-cat-chk:checked');
-        if (checkboxes.length === 0) {
-            alert('請至少勾選一項分類！');
-            return;
-        }
+        if (checkboxes.length === 0) { alert('請至少勾選一項分類！'); return; }
         if (confirm(`確定要刪除選定的 ${checkboxes.length} 項分類嗎？\n該分類下的商品會被移至「未分類」。`)) {
             const catsToDelete = new Set(Array.from(checkboxes).map(chk => chk.value));
-            customCategories = customCategories.filter(c => !catsToDelete.has(c));
-            products.forEach(p => {
-                if (catsToDelete.has(p.category)) p.category = '未分類';
-            });
-            if (catsToDelete.has(currentCategory)) {
-                currentCategory = '所有';
-            }
+            allCategories = allCategories.filter(c => !catsToDelete.has(c));
+            products.forEach(p => { if (catsToDelete.has(p.category)) p.category = '未分類'; });
+            if (catsToDelete.has(currentCategory)) currentCategory = '所有';
             triggerUpdate();
             closeModal('batchDeleteCategoryModal');
             showToast('已成功批次刪除分類！');
         }
     }
 
-    // 常買清單標題自訂儲存
     function saveFreqBarTitleCustom() {
         const titleEl = document.getElementById('freqBarTitleText');
         const val = titleEl.innerText.trim();
         if (canPersist) {
-            if (val === '' || val === '常買清單') {
-                localStorage.removeItem('daigou_custom_freq_title');
-                titleEl.innerText = '常買清單';
-            } else {
-                localStorage.setItem('daigou_custom_freq_title', val);
-            }
+            if (val === '' || val === '常買清單') { rmStore('custom_freq_title'); titleEl.innerText = '常買清單'; }
+            else { setStore('custom_freq_title', val); }
         }
         updateBatchDeleteFreqButtonState();
     }
 
-    // 更新常買清單批次刪除按鈕文字與顯示狀態
     function updateBatchDeleteFreqButtonState() {
         const titleEl = document.getElementById('freqBarTitleText');
         const freqTitle = titleEl ? (titleEl.innerText.trim() || '常買清單') : '常買清單';
         document.getElementById('batchDelFreqNameText').innerText = freqTitle;
-
         const btn = document.getElementById('batchDelFreqBtn');
-        if (frequentLists.length > 0) {
-            btn.style.display = 'inline-block';
-        } else {
-            btn.style.display = 'none';
-        }
+        btn.style.display = frequentLists.length > 0 ? 'inline-block' : 'none';
     }
 
-    // 打開批次刪除常買清單彈窗
     function openBatchDeleteFreqModal() {
-        const titleEl = document.getElementById('freqBarTitleText');
-        const freqTitle = titleEl ? (titleEl.innerText.trim() || '常買清單') : '常買清單';
+        const freqTitle = document.getElementById('freqBarTitleText').innerText.trim() || '常買清單';
         document.getElementById('batchDelModalTitle').innerText = `批次刪除${freqTitle}`;
-
         const container = document.getElementById('batchDeleteFreqListContainer');
         container.innerHTML = frequentLists.map(list => `
             <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer;">
@@ -1063,17 +1020,12 @@
                 <span>${list.name} (${list.items.length}項商品)</span>
             </label>
         `).join('');
-
         document.getElementById('batchDeleteFreqModal').style.display = 'flex';
     }
 
-    // 執行批次刪除常買清單
     function executeBatchDeleteFreq() {
         const checkboxes = document.querySelectorAll('.batch-freq-chk:checked');
-        if (checkboxes.length === 0) {
-            alert('請至少勾選一項常買清單！');
-            return;
-        }
+        if (checkboxes.length === 0) { alert('請至少勾選一項常買清單！'); return; }
         if (confirm(`確定要刪除選定的 ${checkboxes.length} 項常買清單嗎？`)) {
             const idsToDelete = new Set(Array.from(checkboxes).map(chk => parseInt(chk.value)));
             frequentLists = frequentLists.filter(f => !idsToDelete.has(f.id));
@@ -1083,30 +1035,18 @@
         }
     }
 
-    // 右鍵選單：複製商品
     function contextCopyProduct() {
         if (!activeContextMenuProductId) return;
         const p = products.find(x => x.id == activeContextMenuProductId);
-        if (p) {
-            clipboardProduct = JSON.parse(JSON.stringify(p));
-            showToast(`已複製商品「${p.name}」`);
-        }
+        if (p) { clipboardProduct = JSON.parse(JSON.stringify(p)); showToast(`已複製商品「${p.name}」`); }
     }
 
-    // 右鍵選單：貼上商品
     function contextPasteProduct() {
         if (!clipboardProduct) return;
-        const newProd = {
-            ...clipboardProduct,
-            id: Date.now() + Math.floor(Math.random() * 1000),
-            name: clipboardProduct.name + ' (複製)'
-        };
-        products.push(newProd);
-        triggerUpdate();
-        showToast(`已貼上商品「${newProd.name}」`);
+        const newProd = { ...clipboardProduct, id: Date.now() + Math.floor(Math.random() * 1000), name: clipboardProduct.name + ' (複製)' };
+        products.push(newProd); triggerUpdate(); showToast(`已貼上商品「${newProd.name}」`);
     }
 
-    // 大量新增相關函式
     function openBulkModal() {
         if (isEditMode) toggleEditMode();
         if (isDeleteMode) toggleDeleteMode();
@@ -1118,20 +1058,23 @@
     function renderBulkTableRows() {
         const rowCount = parseInt(document.getElementById('bulkRowCount').value) || 5;
         const tbody = document.getElementById('bulkTableBody');
-        const catOptions = ['未分類', ...customCategories].map(c => `<option value="${c}">${c}</option>`).join('');
-
+        const catOptions = allCategories.map(c => `<option value="${c}">${c}</option>`).join('') + `<option value="__NEW__" style="color:var(--primary-color); font-weight:bold;">+ 建立新分類</option>`;
         let html = '';
         for (let i = 0; i < rowCount; i++) {
             html += `
                 <tr class="bulk-row">
-                    <td><input type="file" class="bulk-img" accept="image/png, image/jpeg, image/webp" style="font-size: 12px; width: 130px;"></td>
-                    <td><select class="bulk-cat">${catOptions}</select></td>
+                    <td><input type="file" class="bulk-img" accept="image/png, image/jpeg, image/webp" style="font-size: 11px; width: 90px; padding: 2px;"></td>
+                    <td><select class="bulk-cat" onfocus="this.dataset.oldValue = this.value" onchange="handleCategorySelectChange(this)">${catOptions}</select></td>
                     <td><input type="text" class="bulk-name" placeholder="例如: 蘋果"></td>
-                    <td><input type="text" class="bulk-brand" placeholder="例如: 日本"></td>
-                    <td><input type="text" class="bulk-cap" placeholder="例如: 3顆裝"></td>
-                    <td><input type="text" class="bulk-cust-title" placeholder="例如: 甜度"></td>
-                    <td><input type="text" class="bulk-cust-val" placeholder="例如: 微糖"></td>
+                    <td><input type="text" class="bulk-brand" placeholder="品牌"></td>
+                    <td><input type="text" class="bulk-cap" placeholder="規格"></td>
                     <td><input type="number" class="bulk-price" placeholder="100" min="0"></td>
+                    <td><input type="text" class="bulk-date-title" placeholder="日期標題"></td>
+                    <td><input type="date" class="bulk-date"></td>
+                    <td><input type="text" class="bulk-cust-title" placeholder="自訂標題"></td>
+                    <td><input type="text" class="bulk-cust-val" placeholder="自訂內容"></td>
+                    <td><input type="text" class="bulk-tags" placeholder="最多3個,隔開"></td>
+                    <td><textarea class="bulk-notes" placeholder="備註..." style="height:32px; resize:vertical; padding:4px;"></textarea></td>
                 </tr>
             `;
         }
@@ -1141,21 +1084,32 @@
     function saveBulkProducts() {
         const rows = document.querySelectorAll('.bulk-row');
         let promises = [];
-
         rows.forEach((row, index) => {
             const name = row.querySelector('.bulk-name').value.trim();
-            if (!name) return; // 略過空白列
-
-            const cat = row.querySelector('.bulk-cat').value;
-            const brand = row.querySelector('.bulk-brand').value.trim();
-            const cap = row.querySelector('.bulk-cap').value.trim();
-            const custTitle = row.querySelector('.bulk-cust-title').value.trim();
-            const custVal = row.querySelector('.bulk-cust-val').value.trim();
-            const price = row.querySelector('.bulk-price').value.trim();
-            const fileInput = row.querySelector('.bulk-img');
-
+            if (!name) return; 
             const pPromise = new Promise((resolve) => {
-                let imgBase64 = fallbackImage;
+                const getVals = () => {
+                    const tagRaw = row.querySelector('.bulk-tags').value.trim();
+                    const tagsArr = tagRaw ? tagRaw.split(',').map(t=>t.trim()).filter(t=>t).slice(0,3) : [];
+                    let dateVal = row.querySelector('.bulk-date').value;
+                    if(dateVal) dateVal = dateVal.replace(/-/g, '/');
+                    return {
+                        id: Date.now() + index + Math.floor(Math.random()*1000),
+                        category: row.querySelector('.bulk-cat').value,
+                        name: name,
+                        brand: row.querySelector('.bulk-brand').value.trim(),
+                        capacity: row.querySelector('.bulk-cap').value.trim(),
+                        customTitle: row.querySelector('.bulk-cust-title').value.trim(),
+                        customValue: row.querySelector('.bulk-cust-val').value.trim(),
+                        price: row.querySelector('.bulk-price').value.trim(),
+                        dateTitle: row.querySelector('.bulk-date-title').value.trim(),
+                        date: dateVal,
+                        tags: tagsArr,
+                        notes: row.querySelector('.bulk-notes').value.trim()
+                    };
+                };
+                
+                const fileInput = row.querySelector('.bulk-img');
                 if (fileInput.files && fileInput.files[0]) {
                     const reader = new FileReader();
                     reader.onload = function(e) {
@@ -1164,64 +1118,132 @@
                             const canvas = document.createElement('canvas');
                             const MAX_WIDTH = 300;
                             const scaleSize = MAX_WIDTH / img.width;
-                            canvas.width = MAX_WIDTH;
-                            canvas.height = img.height * scaleSize;
+                            canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize;
                             const ctx = canvas.getContext('2d');
-                            ctx.fillStyle = '#FFFFFF';
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height);
                             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            imgBase64 = canvas.toDataURL('image/jpeg', 0.9);
-                            resolve({
-                                id: Date.now() + index + Math.floor(Math.random()*1000),
-                                category: cat,
-                                name: name,
-                                brand: brand,
-                                capacity: cap,
-                                customTitle: custTitle,
-                                customValue: custVal,
-                                price: price,
-                                image: imgBase64
-                            });
+                            const obj = getVals();
+                            obj.image = canvas.toDataURL('image/jpeg', 0.9);
+                            resolve(obj);
                         };
                         img.src = e.target.result;
                     };
                     reader.readAsDataURL(fileInput.files[0]);
                 } else {
-                    resolve({
-                        id: Date.now() + index + Math.floor(Math.random()*1000),
-                        category: cat,
-                        name: name,
-                        brand: brand,
-                        capacity: cap,
-                        customTitle: custTitle,
-                        customValue: custVal,
-                        price: price,
-                        image: fallbackImage
-                    });
+                    const obj = getVals();
+                    obj.image = fallbackImage;
+                    resolve(obj);
                 }
             });
             promises.push(pPromise);
         });
 
-        if (promises.length === 0) {
-            alert('請至少填寫一項商品名稱！');
-            return;
-        }
-
+        if (promises.length === 0) { alert('請至少填寫一項商品名稱！'); return; }
         Promise.all(promises).then(newProducts => {
-            products.push(...newProducts);
-            triggerUpdate();
-            closeModal('bulkModal');
+            products.push(...newProducts); triggerUpdate(); closeModal('bulkModal');
             showToast(`成功批量新增 ${newProducts.length} 項商品！`);
         });
     }
 
-    // 複製帶有個人資料的專屬短連結
+    function openBatchEditModal() {
+        if (isEditMode) toggleEditMode();
+        if (isDeleteMode) toggleDeleteMode();
+        const tbody = document.getElementById('batchEditTableBody');
+        const visibleIds = getCurrentVisibleProductIds();
+        const itemsToEdit = products.filter(p => visibleIds.includes(p.id));
+        
+        if(itemsToEdit.length === 0) {
+            alert('目前畫面上沒有可修改的商品，請調整搜尋或篩選條件！');
+            return;
+        }
+
+        const catOptions = allCategories.map(c => `<option value="${c}">${c}</option>`).join('') + `<option value="__NEW__" style="color:var(--primary-color); font-weight:bold;">+ 建立新分類</option>`;
+
+        tbody.innerHTML = itemsToEdit.map(p => `
+            <tr class="batch-edit-row" data-id="${p.id}">
+                <td>
+                    <img src="${p.image}" style="width:40px;height:40px;object-fit:contain; border-radius:4px; display:block; margin: 0 auto 4px auto;">
+                    <input type="file" class="be-img" accept="image/png, image/jpeg, image/webp" style="font-size: 11px; width: 85px; padding: 2px;">
+                </td>
+                <td><select class="be-cat" onfocus="this.dataset.oldValue = this.value" onchange="handleCategorySelectChange(this)">${allCategories.map(c => `<option value="${c}" ${c===p.category?'selected':''}>${c}</option>`).join('')}<option value="__NEW__" style="color:var(--primary-color); font-weight:bold;">+ 建立新分類</option></select></td>
+                <td><input type="text" class="be-name" value="${p.name}"></td>
+                <td><input type="text" class="be-brand" value="${p.brand||''}"></td>
+                <td><input type="text" class="be-cap" value="${p.capacity||''}"></td>
+                <td><input type="number" class="be-price" value="${p.price||''}"></td>
+                <td><input type="text" class="be-date-title" value="${p.dateTitle||''}"></td>
+                <td><input type="date" class="be-date" value="${p.date ? p.date.replace(/\//g,'-') : ''}"></td>
+                <td><input type="text" class="be-cust-title" value="${p.customTitle||''}"></td>
+                <td><input type="text" class="be-cust-val" value="${p.customValue||''}"></td>
+                <td><input type="text" class="be-tags" value="${(p.tags||[]).join(',')}"></td>
+                <td><textarea class="be-notes" style="height:32px; resize:vertical; padding:4px;">${p.notes||''}</textarea></td>
+            </tr>
+        `).join('');
+        document.getElementById('batchEditModal').style.display = 'flex';
+    }
+
+    function saveBatchEdit() {
+        const rows = document.querySelectorAll('.batch-edit-row');
+        let promises = [];
+
+        rows.forEach(row => {
+            const id = parseInt(row.getAttribute('data-id'));
+            const p = products.find(x => x.id === id);
+            if(p) {
+                const pPromise = new Promise((resolve) => {
+                    const updateData = () => {
+                        p.category = row.querySelector('.be-cat').value;
+                        p.name = row.querySelector('.be-name').value.trim();
+                        p.brand = row.querySelector('.be-brand').value.trim();
+                        p.capacity = row.querySelector('.be-cap').value.trim();
+                        p.price = row.querySelector('.be-price').value.trim();
+                        p.dateTitle = row.querySelector('.be-date-title').value.trim();
+                        let d = row.querySelector('.be-date').value;
+                        p.date = d ? d.replace(/-/g, '/') : '';
+                        p.customTitle = row.querySelector('.be-cust-title').value.trim();
+                        p.customValue = row.querySelector('.be-cust-val').value.trim();
+                        const tagsRaw = row.querySelector('.be-tags').value.trim();
+                        p.tags = tagsRaw ? tagsRaw.split(',').map(t=>t.trim()).filter(t=>t).slice(0,3) : [];
+                        p.notes = row.querySelector('.be-notes').value.trim();
+                        resolve();
+                    };
+
+                    const fileInput = row.querySelector('.be-img');
+                    if (fileInput && fileInput.files && fileInput.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const img = new Image();
+                            img.onload = function() {
+                                const canvas = document.createElement('canvas');
+                                const MAX_WIDTH = 300;
+                                const scaleSize = MAX_WIDTH / img.width;
+                                canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize;
+                                const ctx = canvas.getContext('2d');
+                                ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                p.image = canvas.toDataURL('image/jpeg', 0.9);
+                                updateData();
+                            };
+                            img.src = e.target.result;
+                        };
+                        reader.readAsDataURL(fileInput.files[0]);
+                    } else {
+                        updateData();
+                    }
+                });
+                promises.push(pPromise);
+            }
+        });
+
+        Promise.all(promises).then(() => {
+            triggerUpdate();
+            closeModal('batchEditModal');
+            showToast('批次修改已成功儲存！');
+        });
+    }
+
     async function copyDataLink() {
         const dataToShare = {
-            customCategories,
-            products,
-            frequentLists,
+            allCategories, products, frequentLists,
             budget: document.getElementById('budgetInput').value,
             siteTitle: document.getElementById('siteTitle').innerText,
             siteSubtitle: document.getElementById('siteSubtitle').innerText,
@@ -1230,64 +1252,39 @@
         const jsonStr = JSON.stringify(dataToShare);
         const encoded = btoa(encodeURIComponent(jsonStr));
         const longUrl = window.location.origin + window.location.pathname + '#data=' + encoded;
-
         showToast('正在產生短連結...');
-
         try {
             const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`);
-            if (!response.ok) throw new Error('Network response was not ok');
+            if (!response.ok) throw new Error('Network error');
             const shortUrl = await response.text();
-
             if (shortUrl && shortUrl.startsWith('http')) {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
-                    await navigator.clipboard.writeText(shortUrl);
-                    showToast('已複製個人資料短連結！可在 LINE 直接貼上開啟');
-                } else {
-                    prompt('請複製以下短連結：', shortUrl);
-                }
-            } else {
-                throw new Error('Invalid short URL');
-            }
+                    await navigator.clipboard.writeText(shortUrl); showToast('已複製短連結！');
+                } else prompt('請複製以下短連結：', shortUrl);
+            } else throw new Error('Invalid URL');
         } catch (err) {
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(longUrl);
-                showToast('資料量較大，已複製原始連結！');
-            } else {
-                prompt('資料量較大，請複製以下連結：', longUrl);
-            }
+                await navigator.clipboard.writeText(longUrl); showToast('已複製原始連結！');
+            } else prompt('資料量較大，請複製以下連結：', longUrl);
         }
     }
 
-    // 更新檢視確認視窗內的標題
     function updateCartModalTitle() {
         const titleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
         document.getElementById('cartModalTitle').innerText = `${titleText}確認`;
     }
 
-    // 儲存自訂標題與介紹
     function saveHeaderCustom() {
         let titleEl = document.getElementById('siteTitle');
         let subtitleEl = document.getElementById('siteSubtitle');
-        
         let titleVal = titleEl.innerText.trim();
         let subtitleVal = subtitleEl.innerText.trim();
-
         if (canPersist) {
-            if (titleVal === '' || titleVal === '待購清單') {
-                localStorage.removeItem('daigou_custom_title');
-                titleEl.innerText = '待購清單';
-            } else {
-                localStorage.setItem('daigou_custom_title', titleVal);
-            }
-
-            if (subtitleVal === '' || subtitleVal === '方便記錄和麻煩他人代買') {
-                localStorage.removeItem('daigou_custom_subtitle');
-                subtitleEl.innerText = '方便記錄和麻煩他人代買';
-            } else {
-                localStorage.setItem('daigou_custom_subtitle', subtitleVal);
-            }
+            if (titleVal === '' || titleVal === '待購清單') { rmStore('custom_title'); titleEl.innerText = '待購清單'; }
+            else setStore('custom_title', titleVal);
+            if (subtitleVal === '' || subtitleVal === '方便記錄和麻煩他人代買') { rmStore('custom_subtitle'); subtitleEl.innerText = '方便記錄和麻煩他人代買'; }
+            else setStore('custom_subtitle', subtitleVal);
         }
-
         updateCartModalTitle();
     }
 
@@ -1305,37 +1302,27 @@
         }
     }
 
-    function toggleDesktopMode() {
-        isDesktopMode = !isDesktopMode;
-        initDesktopMode();
-        setTimeout(updateSidebarSticky, 100);
-    }
+    function toggleDesktopMode() { isDesktopMode = !isDesktopMode; initDesktopMode(); setTimeout(updateSidebarSticky, 100); }
 
     function saveData() {
         if (!canPersist) return; 
-        localStorage.setItem('daigou_custom_cats', JSON.stringify(customCategories));
-        localStorage.setItem('daigou_prods', JSON.stringify(products));
-        localStorage.setItem('daigou_freq_lists', JSON.stringify(frequentLists));
-        localStorage.setItem('daigou_budget', document.getElementById('budgetInput').value);
+        setStore('all_cats', JSON.stringify(allCategories));
+        setStore('prods', JSON.stringify(products));
+        setStore('freq_lists', JSON.stringify(frequentLists));
+        setStore('budget', document.getElementById('budgetInput').value);
+        setStore('date_sort_select', document.getElementById('dateSortSelect').value);
+        setStore('field_order', JSON.stringify(fieldOrder));
     }
 
     function triggerUpdate() {
-        saveData();
-        checkBudget();
-        renderCategories();
-        renderFrequentLists();
-        updateBatchDeleteFreqButtonState();
-        updateProductView();
-        updateCartDisplay();
+        saveData(); checkBudget(); updateActiveCategoryClass(); renderFrequentLists();
+        updateBatchDeleteFreqButtonState(); updateProductView(); updateCartDisplay();
         setTimeout(updateSidebarSticky, 50);
     }
 
-    // JSON 備份
     function exportJsonData() {
         const backupData = {
-            customCategories,
-            products,
-            frequentLists,
+            allCategories, products, frequentLists,
             budget: document.getElementById('budgetInput').value,
             siteTitle: document.getElementById('siteTitle').innerText,
             siteSubtitle: document.getElementById('siteSubtitle').innerText,
@@ -1344,133 +1331,210 @@
         const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `daigou_backup_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+        a.href = url; a.download = `daigou_backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.click(); URL.revokeObjectURL(url);
         showToast('備份檔案已成功下載！');
     }
 
-    // JSON 還原
     function importJsonData(event) {
         const file = event.target.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
-                const data = JSON.parse(e.target.result);
-                if (data.customCategories) customCategories = data.customCategories;
-                if (data.products) products = data.products;
-                if (data.frequentLists) frequentLists = data.frequentLists;
-                if (data.budget) document.getElementById('budgetInput').value = data.budget;
-                if (data.siteTitle) {
-                    document.getElementById('siteTitle').innerText = data.siteTitle;
-                    localStorage.setItem('daigou_custom_title', data.siteTitle);
-                }
-                if (data.siteSubtitle) {
-                    document.getElementById('siteSubtitle').innerText = data.siteSubtitle;
-                    localStorage.setItem('daigou_custom_subtitle', data.siteSubtitle);
-                }
-                if (data.freqBarTitle) {
-                    document.getElementById('freqBarTitleText').innerText = data.freqBarTitle;
-                    localStorage.setItem('daigou_custom_freq_title', data.freqBarTitle);
-                }
-                saveData();
-                triggerUpdate();
-                alert('資料還原成功！');
-            } catch (err) {
-                alert('檔案格式錯誤，還原失敗！');
-            }
+                pendingImportData = JSON.parse(e.target.result);
+                document.getElementById('importConfirmModal').style.display = 'flex';
+            } catch (err) { alert('檔案格式錯誤，讀取失敗！'); }
         };
         reader.readAsText(file);
+        event.target.value = ''; 
+    }
+
+    function executeImport(mode) {
+        if (!pendingImportData) return;
+        const data = pendingImportData;
+        
+        if (mode === 'overwrite') {
+            if(data.customCategories) {
+                allCategories = ['未分類'];
+                data.customCategories.forEach(c => { if(c !== '未分類') allCategories.push(c); });
+            } else if(data.allCategories) { allCategories = data.allCategories; }
+            if(!allCategories.includes('未分類')) allCategories.unshift('未分類');
+            
+            if (data.products) products = data.products;
+            if (data.frequentLists) frequentLists = data.frequentLists;
+        } else if (mode === 'append') {
+            let catsToImport = data.allCategories || data.customCategories || [];
+            catsToImport.forEach(c => {
+                if(!allCategories.includes(c)) allCategories.push(c);
+            });
+            if(data.products) {
+                data.products.forEach(ip => {
+                    let existInUncat = products.find(p => p.name === ip.name && p.category === '未分類');
+                    if (existInUncat) {
+                        existInUncat.category = ip.category;
+                    } else {
+                        let exist = products.find(p => p.name === ip.name && p.brand === ip.brand && p.category === ip.category);
+                        if (!exist) {
+                            ip.id = Date.now() + Math.floor(Math.random()*10000);
+                            products.push(ip);
+                        }
+                    }
+                });
+            }
+            if(data.frequentLists) {
+                data.frequentLists.forEach(fl => {
+                    let existList = frequentLists.find(f => f.name === fl.name);
+                    if (existList) {
+                        if (fl.items && fl.items.length > 0) {
+                            fl.items.forEach(newItem => {
+                                let itemMatch = existList.items.find(i => i.id === newItem.id);
+                                if(itemMatch) itemMatch.qty += newItem.qty;
+                                else existList.items.push(newItem);
+                            });
+                        }
+                    } else {
+                        fl.id = Date.now() + Math.floor(Math.random()*10000);
+                        frequentLists.push(fl);
+                    }
+                });
+            }
+        }
+        
+        if (data.budget) { document.getElementById('budgetInput').value = data.budget; setStore('budget', data.budget); }
+        if (data.siteTitle) { document.getElementById('siteTitle').innerText = data.siteTitle; setStore('custom_title', data.siteTitle); }
+        if (data.siteSubtitle) { document.getElementById('siteSubtitle').innerText = data.siteSubtitle; setStore('custom_subtitle', data.siteSubtitle); }
+        if (data.freqBarTitle) { document.getElementById('freqBarTitleText').innerText = data.freqBarTitle; setStore('custom_freq_title', data.freqBarTitle); }
+        
+        pendingImportData = null;
+        triggerUpdate();
+        renderCategories(); 
+        closeModal('importConfirmModal');
+        alert('資料還原合併成功！');
     }
 
     function checkBudget() {
         const budgetInput = document.getElementById('budgetInput').value;
-        if (canPersist) {
-            localStorage.setItem('daigou_budget', budgetInput);
-        }
-
+        if (canPersist) setStore('budget', budgetInput);
         let total = 0;
-        products.forEach(p => {
-            if (cart[p.id]) {
-                total += (parseInt(p.price) || 0) * cart[p.id];
-            }
-        });
-
+        products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
         document.getElementById('cartTotalDisplay').innerText = `$${total}`;
-
         const budgetAreaContainer = document.getElementById('budgetAreaContainer');
         const budgetVal = parseInt(budgetInput);
-
-        if (budgetInput && !isNaN(budgetVal) && budgetVal > 0 && total > budgetVal) {
-            budgetAreaContainer.classList.add('over-budget');
-        } else {
-            budgetAreaContainer.classList.remove('over-budget');
-        }
-        setTimeout(updateSidebarSticky, 50);
+        if (budgetInput && !isNaN(budgetVal) && budgetVal > 0 && total > budgetVal) budgetAreaContainer.classList.add('over-budget');
+        else budgetAreaContainer.classList.remove('over-budget');
     }
 
     function showToast(message) {
         const toast = document.getElementById('toastNotification');
-        toast.innerText = message;
-        toast.style.display = 'block';
-        toast.style.opacity = '1';
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            setTimeout(() => { toast.style.display = 'none'; }, 300);
-        }, 2500);
+        toast.innerText = message; toast.style.display = 'block'; toast.style.opacity = '1';
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => { toast.style.display = 'none'; }, 300); }, 2500);
     }
 
     function addCategory() {
         const input = document.getElementById('newCategoryInput');
         const newCat = input.value.trim();
         if (!newCat) return;
-        if (newCat === '所有' || newCat === '未分類') { alert('「所有」與「未分類」為系統內建保留字。'); return; }
-        if (customCategories.length >= 20) { alert('商品分類最多只能新增 20 個！'); return; }
-        if (customCategories.includes(newCat)) { alert('此分類已存在！'); return; }
-        customCategories.push(newCat);
+        if (newCat === '所有' || newCat === '未分類') { alert('保留字無法使用。'); return; }
+        if (allCategories.length >= 26) { alert('最多新增 25 個自訂分類！'); return; }
+        if (allCategories.includes(newCat)) { alert('分類已存在！'); return; }
+        allCategories.push(newCat);
         input.value = ''; 
-        triggerUpdate();
-        changeCategory(newCat);
+        renderCategories(); changeCategory(newCat);
     }
 
     function deleteCategory(cat, event) {
         event.stopPropagation();
-        if(confirm(`確定要刪除「${cat}」分類嗎？\n該分類下的所有商品會被移至「未分類」。`)) {
-            customCategories = customCategories.filter(c => c !== cat);
+        if(confirm(`確定要刪除「${cat}」嗎？\n商品會移至「未分類」。`)) {
+            allCategories = allCategories.filter(c => c !== cat);
             products.forEach(p => { if (p.category === cat) p.category = '未分類'; });
             if (currentCategory === cat) currentCategory = '所有';
-            triggerUpdate();
+            renderCategories(); triggerUpdate();
         }
+    }
+
+    function openRenameCategoryModal(cat, event) {
+        event.stopPropagation();
+        currentRenamingCat = cat;
+        document.getElementById('renameCategoryInput').value = cat;
+        document.getElementById('renameCategoryModal').style.display = 'flex';
+        document.getElementById('renameCategoryInput').focus();
+    }
+
+    function confirmRenameCategory() {
+        const newName = document.getElementById('renameCategoryInput').value.trim();
+        const oldName = currentRenamingCat;
+        
+        if (!newName) {
+            alert('分類名稱不能為空！');
+            return;
+        }
+        if (newName === oldName) {
+            closeModal('renameCategoryModal');
+            return;
+        }
+        if (newName === '所有' || newName === '未分類' || allCategories.includes(newName)) {
+            alert('分類名稱不可與預設保留字或其他分類重複！');
+            return;
+        }
+        
+        const idx = allCategories.indexOf(oldName);
+        if(idx !== -1) allCategories[idx] = newName;
+        products.forEach(p => { if(p.category === oldName) p.category = newName; });
+        if(currentCategory === oldName) currentCategory = newName;
+        
+        showToast(`分類已重新命名為「${newName}」`);
+        renderCategories(); 
+        triggerUpdate();
+        closeModal('renameCategoryModal');
+    }
+
+    function updateActiveCategoryClass() {
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            if(btn.getAttribute('data-cat') === currentCategory) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
     }
 
     function renderCategories() {
         const container = document.getElementById('categoryList');
-        let html = `<div class="category-item" onclick="changeCategory('所有')"><button class="category-btn ${currentCategory === '所有' ? 'active' : ''}">所有</button></div>
-                    <div class="category-item" onclick="changeCategory('未分類')"><button class="category-btn ${currentCategory === '未分類' ? 'active' : ''}">未分類</button></div>`;
-        html += customCategories.map(cat => `
-            <div class="category-item draggable" draggable="true" ondragstart="dragStart(event, 'cat', '${cat}')" ondragover="allowDrop(event)" ondrop="drop(event, 'cat', '${cat}')" ondragend="dragEnd(event)" onclick="changeCategory('${cat}')">
-                <button class="category-btn ${cat === currentCategory ? 'active' : ''}">${cat}</button>
-                <button class="del-cat-btn" onclick="deleteCategory('${cat}', event)">✖</button>
+        let html = `<div class="category-item" onclick="changeCategory('所有')"><div class="category-btn ${currentCategory === '所有' ? 'active' : ''}" data-cat="所有">所有</div></div>`;
+        
+        html += allCategories.map(cat => {
+            const delBtn = cat !== '未分類' ? `<button class="del-cat-btn" onclick="deleteCategory('${cat}', event)" title="刪除分類">✖</button>` : '';
+            const editBtn = cat !== '未分類' ? `<button class="edit-cat-btn" onclick="openRenameCategoryModal('${cat}', event)" title="編輯分類名稱">✏️</button>` : '';
+            
+            if (cat === '未分類') {
+                return `
+                <div class="category-item draggable" draggable="true" ondragstart="dragStart(event, 'cat', '${cat}')" ondragover="allowDrop(event)" ondrop="drop(event, 'cat', '${cat}')" ondragend="dragEnd(event)">
+                    <div class="category-btn ${cat === currentCategory ? 'active' : ''}" data-cat="${cat}" onclick="changeCategory('${cat}')">${cat}</div>
+                </div>`;
+            }
+            
+            return `
+            <div class="category-item draggable" draggable="true" ondragstart="dragStart(event, 'cat', '${cat}')" ondragover="allowDrop(event)" ondrop="drop(event, 'cat', '${cat}')" ondragend="dragEnd(event)">
+                ${editBtn}
+                <div class="category-btn ${cat === currentCategory ? 'active' : ''}" data-cat="${cat}" onclick="changeCategory('${cat}')">
+                    ${cat}
+                </div>
+                ${delBtn}
             </div>
-        `).join('');
+            `;
+        }).join('');
         container.innerHTML = html;
         setTimeout(updateSidebarSticky, 50);
     }
 
     function changeCategory(cat) {
-        if (isEditMode || isDeleteMode) {
-            if (isEditMode) toggleEditMode();
-            if (isDeleteMode) toggleDeleteMode();
-        }
+        if (currentCategory === cat) return; 
+        if (isEditMode) toggleEditMode(); if (isDeleteMode) toggleDeleteMode();
         currentCategory = cat; 
-        renderCategories();
-        document.getElementById('brandFilter').value = '';
-        document.getElementById('capacityFilter').value = '';
-        document.getElementById('searchInput').value = '';
-        document.getElementById('minPriceF').value = '';
-        document.getElementById('maxPriceF').value = '';
+        
+        updateActiveCategoryClass();
+        
+        document.getElementById('brandFilter').value = ''; document.getElementById('capacityFilter').value = '';
+        document.getElementById('searchInput').value = ''; document.getElementById('searchDateInput').value = '';
+        document.getElementById('minPriceF').value = ''; document.getElementById('maxPriceF').value = '';
         updateProductView();
     }
 
@@ -1482,11 +1546,11 @@
         document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
         if (draggedItemType !== targetType || draggedId === targetId) return;
         if (targetType === 'cat') {
-            const draggedIdx = customCategories.indexOf(draggedId);
-            const targetIdx = customCategories.indexOf(targetId);
-            customCategories.splice(draggedIdx, 1);
-            customCategories.splice(targetIdx, 0, draggedId);
-            triggerUpdate();
+            const draggedIdx = allCategories.indexOf(draggedId);
+            const targetIdx = allCategories.indexOf(targetId);
+            allCategories.splice(draggedIdx, 1);
+            allCategories.splice(targetIdx, 0, draggedId);
+            renderCategories(); triggerUpdate();
         } else if (targetType === 'prod') {
             const draggedIdx = products.findIndex(p => p.id == draggedId);
             const targetIdx = products.findIndex(p => p.id == targetId);
@@ -1507,192 +1571,110 @@
     }
 
     function clearCart() {
-        if (Object.keys(cart).length === 0) { alert('目前的清單已經是空的囉！'); return; }
+        if (Object.keys(cart).length === 0) return;
         if (confirm('確定要清空目前清單內的所有商品嗎？')) {
-            cart = {};
-            triggerUpdate();
-            if (document.getElementById('cartModal').style.display === 'flex') {
-                renderCartTable();
-            }
+            cart = {}; triggerUpdate();
+            if (document.getElementById('cartModal').style.display === 'flex') renderCartTable();
         }
     }
 
     function toggleFreqDropdown(event, prodId) {
-        event.stopPropagation();
-        closeAllDropdowns();
+        event.stopPropagation(); closeAllDropdowns();
         const dropdown = document.getElementById(`freq_dropdown_${prodId}`);
-        if (dropdown) {
-            dropdown.style.display = 'block';
-        }
+        if (dropdown) dropdown.style.display = 'block';
     }
 
-    function closeAllDropdowns() {
-        document.querySelectorAll('[id^="freq_dropdown_"]').forEach(el => {
-            el.style.display = 'none';
-        });
-    }
-
-    window.addEventListener('click', () => {
-        closeAllDropdowns();
-    });
+    function closeAllDropdowns() { document.querySelectorAll('[id^="freq_dropdown_"]').forEach(el => { el.style.display = 'none'; }); }
 
     function addProdToSpecificFreq(prodId, listId) {
         closeAllDropdowns();
         const list = frequentLists.find(l => l.id === listId);
         const prod = products.find(p => p.id === prodId);
         if (!list || !prod) return;
-
         const qtyInput = document.getElementById(`qty_${prodId}`);
         let addQty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
-
         let existing = list.items.find(i => i.id === prodId);
-        if (existing) {
-            existing.qty += addQty;
-        } else {
-            list.items.push({ id: prodId, qty: addQty });
-        }
-        triggerUpdate();
-        showToast(`已將「${prod.name}」加入「${list.name}」`);
+        if (existing) existing.qty += addQty; else list.items.push({ id: prodId, qty: addQty });
+        triggerUpdate(); showToast(`已加入「${list.name}」`);
     }
 
     function addNewFreqAndAddProd(prodId) {
         closeAllDropdowns();
-        if (frequentLists.length >= 10) {
-            alert("常買清單最多只能新增 10 個！");
-            return;
-        }
-        const name = prompt("請為這個新常買清單命名 (例如: 辦公室補貨)：");
+        if (frequentLists.length >= 10) { alert("最多10個！"); return; }
+        const name = prompt("清單命名：");
         if (!name || name.trim() === "") return;
-
-        const newListId = Date.now();
         const qtyInput = document.getElementById(`qty_${prodId}`);
-        let addQty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
-
-        frequentLists.push({
-            id: newListId,
-            name: name.trim(),
-            items: [{ id: prodId, qty: addQty }]
-        });
-        triggerUpdate();
-        const prod = products.find(p => p.id === prodId);
-        showToast(`已建立並將「${prod.name}」加入「${name.trim()}」`);
+        frequentLists.push({ id: Date.now(), name: name.trim(), items: [{ id: prodId, qty: (qtyInput ? parseInt(qtyInput.value)||1 : 1) }] });
+        triggerUpdate(); showToast(`已建立並加入「${name.trim()}」`);
     }
 
-    function openFrequentPreview(listId) {
-        currentPreviewFreqId = listId;
-        renderFreqEditModal();
-        document.getElementById('freqPreviewModal').style.display = 'flex';
-    }
+    function openFrequentPreview(listId) { currentPreviewFreqId = listId; renderFreqEditModal(); document.getElementById('freqPreviewModal').style.display = 'flex'; }
 
     function renderFreqEditModal() {
         const list = frequentLists.find(f => f.id === currentPreviewFreqId);
         if(!list) return;
-
-        document.getElementById('freqPreviewTitle').innerHTML = `
-            常買清單：<input type="text" id="freqEditName" value="${list.name}" onchange="updateFreqName(${list.id}, this.value)" style="padding:4px 8px; font-size:16px; border:1px solid #ccc; border-radius:4px; width:150px; font-weight:bold;">
-        `;
-        
+        document.getElementById('freqPreviewTitle').innerHTML = `常買清單：<input type="text" id="freqEditName" value="${list.name}" onchange="updateFreqName(${list.id}, this.value)" style="padding:4px 8px; font-size:16px; border:1px solid #ccc; border-radius:4px; width:150px; font-weight:bold;">`;
         const previewContainer = document.getElementById('freqPreviewList');
         if (list.items.length === 0) {
-            previewContainer.innerHTML = `<div style="text-align:center; color:#999; padding:15px; border:1px solid #eee; border-radius:5px; background:white;">此常買清單目前沒有商品。</div>`;
+            previewContainer.innerHTML = `<div style="text-align:center; color:#999; padding:15px; border:1px solid #eee; border-radius:5px; background:white;">此清單目前沒有商品。</div>`;
         } else {
-            previewContainer.innerHTML = `
-                <div style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; padding: 5px; background:white;">
-                    ${list.items.map((item) => {
-                        let prod = products.find(p => p.id === item.id);
-                        if (!prod) return '';
-                        return `
-                            <div class="preview-item">
-                                <img src="${prod.image}">
-                                <div style="flex-grow:1; font-size:14px; font-weight:bold; text-align:left;">${prod.name}</div>
-                                <div style="display:flex; align-items:center; gap:5px;">
-                                    <span style="font-size:12px; color:#666;">數量:</span>
-                                    <input type="number" value="${item.qty}" min="1" max="100" style="width:45px; text-align:center; padding:3px;" onchange="updateFreqItemQty(${list.id}, ${prod.id}, this.value)">
-                                </div>
-                                <button onclick="removeFreqItem(${list.id}, ${prod.id})" style="background:#ff4757; color:white; border:none; border-radius:3px; padding:4px 8px; cursor:pointer; font-size:12px;">刪除</button>
+            previewContainer.innerHTML = `<div style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; padding: 5px; background:white;">
+                ${list.items.map((item) => {
+                    let prod = products.find(p => p.id === item.id);
+                    if (!prod) return '';
+                    return `
+                        <div class="preview-item">
+                            <img src="${prod.image}">
+                            <div style="flex-grow:1; font-size:14px; font-weight:bold; text-align:left;">${prod.name}</div>
+                            <div style="display:flex; align-items:center; gap:5px;">
+                                <span style="font-size:12px; color:#666;">數量:</span>
+                                <input type="number" value="${item.qty}" min="1" max="100" style="width:45px; text-align:center; padding:3px;" onchange="updateFreqItemQty(${list.id}, ${prod.id}, this.value)">
                             </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
+                            <button onclick="removeFreqItem(${list.id}, ${prod.id})" style="background:#ff4757; color:white; border:none; border-radius:3px; padding:4px 8px; cursor:pointer; font-size:12px;">刪除</button>
+                        </div>
+                    `;
+                }).join('')}
+            </div>`;
         }
     }
 
-    function updateFreqName(listId, newName) {
-        const list = frequentLists.find(f => f.id === listId);
-        if (list && newName.trim() !== '') {
-            list.name = newName.trim();
-            triggerUpdate();
-        }
-    }
-
-    function updateFreqItemQty(listId, prodId, newQty) {
-        const list = frequentLists.find(f => f.id === listId);
-        if (!list) return;
-        const item = list.items.find(i => i.id === prodId);
-        if (item) {
-            let val = parseInt(newQty);
-            if (isNaN(val) || val < 1) val = 1;
-            if (val > 100) val = 100;
-            item.qty = val;
-            triggerUpdate();
-            renderFreqEditModal();
-        }
-    }
-
-    function removeFreqItem(listId, prodId) {
-        const list = frequentLists.find(f => f.id === listId);
-        if (!list) return;
-        list.items = list.items.filter(i => i.id !== prodId);
-        triggerUpdate();
-        renderFreqEditModal();
-    }
-
+    function updateFreqName(listId, newName) { const list = frequentLists.find(f => f.id === listId); if (list && newName.trim()) { list.name = newName.trim(); triggerUpdate(); } }
+    function updateFreqItemQty(listId, prodId, newQty) { const list = frequentLists.find(f => f.id === listId); if (!list) return; const item = list.items.find(i => i.id === prodId); if (item) { item.qty = Math.max(1, Math.min(100, parseInt(newQty)||1)); triggerUpdate(); renderFreqEditModal(); } }
+    function removeFreqItem(listId, prodId) { const list = frequentLists.find(f => f.id === listId); if (!list) return; list.items = list.items.filter(i => i.id !== prodId); triggerUpdate(); renderFreqEditModal(); }
+    
     function importFrequentList() {
         const list = frequentLists.find(f => f.id === currentPreviewFreqId);
         if(!list) return;
-        let importCount = 0;
-        
+        let count = 0;
         for (let item of list.items) { 
             if (products.some(p => p.id === item.id)) { 
-                if (Object.keys(cart).length >= 100 && !cart[item.id]) {
-                    alert("檢視清單最多只能加入 100 個商品！");
-                    break;
-                }
-                cart[item.id] = item.qty; 
-                importCount++; 
+                if (Object.keys(cart).length >= 100 && !cart[item.id]) { alert("檢視清單最多100個！"); break; }
+                cart[item.id] = item.qty; count++; 
             } 
         }
-
-        triggerUpdate();
-        closeModal('freqPreviewModal'); 
-        
-        if (importCount > 0) { openCartModal(); } else { alert('沒有有效商品可匯入。'); }
+        triggerUpdate(); closeModal('freqPreviewModal'); 
+        if (count > 0) openCartModal(); else alert('無有效商品可匯入。');
     }
-
+    
     function deleteFrequentList() {
-        if(confirm("確定要刪除這個常買清單設定嗎？")) {
-            frequentLists = frequentLists.filter(f => f.id !== currentPreviewFreqId);
-            triggerUpdate(); 
-            closeModal('freqPreviewModal');
-        }
+        if(confirm("確定要刪除這個設定嗎？")) { frequentLists = frequentLists.filter(f => f.id !== currentPreviewFreqId); triggerUpdate(); closeModal('freqPreviewModal'); }
     }
 
-    // 取得當前畫面顯示中的所有商品清單
     function getCurrentVisibleProductIds() {
         const keyword = document.getElementById('searchInput').value.trim();
+        const searchDate = document.getElementById('searchDateInput').value;
         const brandF = document.getElementById('brandFilter').value;
         const capF = document.getElementById('capacityFilter').value;
         const minP = document.getElementById('minPriceF').value;
         const maxP = document.getElementById('maxPriceF').value;
+        const searchDateFormatted = searchDate ? searchDate.replace(/-/g, '/') : '';
 
         let filtered = products.filter(p => {
             let matchCat = (currentCategory === '所有') ? true : (p.category === currentCategory);
-            let matchKey = p.name.includes(keyword) || (p.brand && p.brand.includes(keyword)) || (p.customValue && p.customValue.includes(keyword));
             let matchBrand = brandF === '' || p.brand === brandF;
             let matchCap = capF === '' || p.capacity === capF;
+            let matchDateFilter = searchDateFormatted === '' || p.date === searchDateFormatted;
             let matchPrice = true;
-            
             if (minP || maxP) {
                 const prodPrice = parseInt(p.price);
                 if (isNaN(prodPrice)) matchPrice = false;
@@ -1701,97 +1683,73 @@
                     if (maxP && prodPrice > parseInt(maxP)) matchPrice = false;
                 }
             }
-
-            if (keyword.length > 0) return matchKey; 
-            return matchCat && matchBrand && matchCap && matchPrice;
+            if (keyword.startsWith('#')) {
+                const searchTag = keyword.substring(1).toLowerCase();
+                if(searchTag && (!p.tags || !p.tags.some(t => t.toLowerCase().includes(searchTag)))) return false;
+            } else if (keyword.length > 0) {
+                return matchCat && (p.name.includes(keyword) || (p.brand && p.brand.includes(keyword)) || (p.customValue && p.customValue.includes(keyword))) && matchDateFilter;
+            }
+            return matchCat && matchBrand && matchCap && matchPrice && matchDateFilter;
         });
-
         return filtered.map(p => p.id);
     }
 
-    // 頁面全選切換
     function toggleSelectAll(isChecked) {
         const visibleIds = getCurrentVisibleProductIds();
-        if (isChecked) {
-            visibleIds.forEach(id => selectedForBatch.add(id));
-        } else {
-            visibleIds.forEach(id => selectedForBatch.delete(id));
-        }
+        if (isChecked) visibleIds.forEach(id => selectedForBatch.add(id));
+        else visibleIds.forEach(id => selectedForBatch.delete(id));
         document.getElementById('moveCount').innerText = selectedForBatch.size;
         document.getElementById('deleteCount').innerText = selectedForBatch.size;
         updateProductView();
     }
 
-    // 批次移動模式切換
     function toggleEditMode() {
-        if (isDeleteMode) toggleDeleteMode(); // 關閉刪除模式
-        isEditMode = !isEditMode; 
-        selectedForBatch.clear(); 
+        if (isDeleteMode) toggleDeleteMode();
+        isEditMode = !isEditMode; selectedForBatch.clear(); 
         document.getElementById('moveCount').innerText = 0;
         document.getElementById('selectAllMove').checked = false;
-        
-        const btnToggle = document.getElementById('btnToggleEdit');
+        const btn = document.getElementById('btnToggleEdit');
         const moveToolbar = document.getElementById('moveToolbar');
         if (isEditMode) {
-            btnToggle.innerText = '取消移動'; 
-            btnToggle.style.background = 'var(--edit-color)'; 
-            btnToggle.style.color = 'white';
+            btn.innerText = '取消移動'; btn.style.background = 'var(--edit-color)'; btn.style.color = 'white';
             moveToolbar.style.display = 'flex';
-            document.getElementById('moveTargetCat').innerHTML = ['未分類', ...customCategories].map(c => `<option value="${c}">${c}</option>`).join('');
+            document.getElementById('moveTargetCat').innerHTML = allCategories.map(c => `<option value="${c}">${c}</option>`).join('');
         } else {
-            btnToggle.innerText = '✏️ 批次移動商品'; 
-            btnToggle.style.background = 'white'; 
-            btnToggle.style.color = 'var(--edit-color)';
+            btn.innerText = '✏️ 批次移動'; btn.style.background = 'white'; btn.style.color = 'var(--edit-color)';
             moveToolbar.style.display = 'none';
         }
         updateProductView();
     }
 
-    // 批次刪除模式切換
     function toggleDeleteMode() {
-        if (isEditMode) toggleEditMode(); // 關閉移動模式
-        isDeleteMode = !isDeleteMode; 
-        selectedForBatch.clear(); 
+        if (isEditMode) toggleEditMode();
+        isDeleteMode = !isDeleteMode; selectedForBatch.clear(); 
         document.getElementById('deleteCount').innerText = 0;
         document.getElementById('selectAllDelete').checked = false;
-        
-        const btnToggle = document.getElementById('btnToggleDelete');
+        const btn = document.getElementById('btnToggleDelete');
         const deleteToolbar = document.getElementById('deleteToolbar');
         if (isDeleteMode) {
-            btnToggle.innerText = '取消刪除'; 
-            btnToggle.style.background = '#ff4757'; 
-            btnToggle.style.color = 'white';
-            deleteToolbar.style.display = 'flex';
+            btn.innerText = '取消刪除'; btn.style.background = '#ff4757'; btn.style.color = 'white'; deleteToolbar.style.display = 'flex';
         } else {
-            btnToggle.innerText = '🗑️ 批次刪除商品'; 
-            btnToggle.style.background = 'white'; 
-            btnToggle.style.color = '#ff4757';
-            deleteToolbar.style.display = 'none';
+            btn.innerText = '🗑️ 批次刪除'; btn.style.background = 'white'; btn.style.color = '#ff4757'; deleteToolbar.style.display = 'none';
         }
         updateProductView();
     }
 
     function toggleBatchSelect(id, isChecked) { 
-        if (isChecked) selectedForBatch.add(id); 
-        else selectedForBatch.delete(id); 
-        
+        if (isChecked) selectedForBatch.add(id); else selectedForBatch.delete(id); 
         document.getElementById('moveCount').innerText = selectedForBatch.size;
         document.getElementById('deleteCount').innerText = selectedForBatch.size;
-
-        // 檢查是否所有可見商品皆已被選取，若是則勾選「頁面全選」框
         const visibleIds = getCurrentVisibleProductIds();
         const allChecked = visibleIds.length > 0 && visibleIds.every(vid => selectedForBatch.has(vid));
-        document.getElementById('selectAllMove').checked = allChecked;
-        document.getElementById('selectAllDelete').checked = allChecked;
+        document.getElementById('selectAllMove').checked = allChecked; document.getElementById('selectAllDelete').checked = allChecked;
     }
 
     function executeMove() {
         if (selectedForBatch.size === 0) { alert('請先勾選商品！'); return; }
         const targetCat = document.getElementById('moveTargetCat').value;
         products.forEach(p => { if (selectedForBatch.has(p.id)) p.category = targetCat; });
-        triggerUpdate(); 
-        alert('移動成功！'); 
-        toggleEditMode();
+        triggerUpdate(); alert('移動成功！'); toggleEditMode();
     }
 
     function executeBatchDelete() {
@@ -1799,9 +1757,7 @@
         if (confirm(`確定要永久刪除選取的 ${selectedForBatch.size} 項商品嗎？`)) {
             products = products.filter(p => !selectedForBatch.has(p.id));
             selectedForBatch.forEach(id => delete cart[id]);
-            triggerUpdate();
-            alert('批次刪除成功！');
-            toggleDeleteMode();
+            triggerUpdate(); alert('批次刪除成功！'); toggleDeleteMode();
         }
     }
 
@@ -1811,104 +1767,148 @@
     }
 
     function openAddProductModal() {
-        if (isEditMode) toggleEditMode();
-        if (isDeleteMode) toggleDeleteMode();
-        editingProductId = null;
-        document.getElementById('productModalTitle').innerText = '新增商品';
-        updateBrandSuggestions();
-
-        document.getElementById('prodCategory').innerHTML = ['未分類', ...customCategories].map(c => `<option value="${c}" ${c === (currentCategory === '所有' ? '未分類' : currentCategory) ? 'selected' : ''}>${c}</option>`).join('');
-        document.getElementById('prodName').value = '';
-        document.getElementById('prodBrand').value = '';
-        document.getElementById('prodCapacity').value = '';
-        document.getElementById('prodCustomTitle').value = '';
-        document.getElementById('prodCustomValue').value = '';
-        document.getElementById('prodPrice').value = '';
-        document.getElementById('prodImage').value = '';
-        tempImageBase64 = fallbackImage;
-        document.getElementById('productModal').style.display = 'flex';
+        if (isEditMode) toggleEditMode(); if (isDeleteMode) toggleDeleteMode();
+        editingProductId = null; document.getElementById('productModalTitle').innerText = '新增商品'; updateBrandSuggestions();
+        document.getElementById('prodCategory').innerHTML = allCategories.map(c => `<option value="${c}" ${c === (currentCategory === '所有' ? '未分類' : currentCategory) ? 'selected' : ''}>${c}</option>`).join('') + `<option value="__NEW__" style="color:var(--primary-color); font-weight:bold;">+ 建立新分類</option>`;
+        document.getElementById('prodName').value = ''; document.getElementById('prodBrand').value = ''; document.getElementById('prodCapacity').value = '';
+        document.getElementById('prodCustomTitle').value = ''; document.getElementById('prodCustomValue').value = ''; document.getElementById('prodPrice').value = '';
+        document.getElementById('prodDateTitle').value = ''; document.getElementById('prodDate').value = ''; 
+        document.getElementById('prodTags').value = ''; document.getElementById('prodNotes').value = '';
+        document.getElementById('prodImage').value = ''; tempImageBase64 = fallbackImage; document.getElementById('productModal').style.display = 'flex';
     }
 
     function openEditProductModal(id) {
-        if (isEditMode) toggleEditMode();
-        if (isDeleteMode) toggleDeleteMode();
-        const p = products.find(x => x.id === id);
-        if(!p) return;
-        
-        editingProductId = id;
-        document.getElementById('productModalTitle').innerText = '編輯商品';
-        updateBrandSuggestions();
-
-        document.getElementById('prodCategory').innerHTML = ['未分類', ...customCategories].map(c => `<option value="${c}" ${c === p.category ? 'selected' : ''}>${c}</option>`).join('');
-        document.getElementById('prodName').value = p.name;
-        document.getElementById('prodBrand').value = p.brand || '';
-        document.getElementById('prodCapacity').value = p.capacity || '';
-        document.getElementById('prodCustomTitle').value = p.customTitle || '';
-        document.getElementById('prodCustomValue').value = p.customValue || '';
-        document.getElementById('prodPrice').value = p.price || '';
-        document.getElementById('prodImage').value = '';
-        tempImageBase64 = p.image;
-        document.getElementById('productModal').style.display = 'flex';
+        if (isEditMode) toggleEditMode(); if (isDeleteMode) toggleDeleteMode();
+        const p = products.find(x => x.id === id); if(!p) return;
+        editingProductId = id; document.getElementById('productModalTitle').innerText = '編輯商品'; updateBrandSuggestions();
+        document.getElementById('prodCategory').innerHTML = allCategories.map(c => `<option value="${c}" ${c === p.category ? 'selected' : ''}>${c}</option>`).join('') + `<option value="__NEW__" style="color:var(--primary-color); font-weight:bold;">+ 建立新分類</option>`;
+        document.getElementById('prodName').value = p.name; document.getElementById('prodBrand').value = p.brand || ''; document.getElementById('prodCapacity').value = p.capacity || '';
+        document.getElementById('prodCustomTitle').value = p.customTitle || ''; document.getElementById('prodCustomValue').value = p.customValue || ''; document.getElementById('prodPrice').value = p.price || '';
+        document.getElementById('prodDateTitle').value = p.dateTitle || '';
+        let dVal = p.date || ''; if(dVal.includes('/')) dVal = dVal.replace(/\//g, '-');
+        document.getElementById('prodDate').value = dVal;
+        document.getElementById('prodTags').value = (p.tags||[]).join(',');
+        document.getElementById('prodNotes').value = p.notes || '';
+        document.getElementById('prodImage').value = ''; tempImageBase64 = p.image; document.getElementById('productModal').style.display = 'flex';
     }
 
     function saveProduct() {
         const name = document.getElementById('prodName').value.trim();
         if(!name) { alert('請填寫商品名稱！'); return; }
+        
+        let dateVal = document.getElementById('prodDate').value;
+        if(dateVal) dateVal = dateVal.replace(/-/g, '/'); 
+        
+        const tagsRaw = document.getElementById('prodTags').value.trim();
+        const tagsArr = tagsRaw ? tagsRaw.split(',').map(t=>t.trim()).filter(t=>t).slice(0,3) : [];
 
         const prodData = {
-            category: document.getElementById('prodCategory').value,
-            name: name,
-            brand: document.getElementById('prodBrand').value.trim() || '',
-            capacity: document.getElementById('prodCapacity').value.trim() || '',
-            customTitle: document.getElementById('prodCustomTitle').value.trim() || '',
-            customValue: document.getElementById('prodCustomValue').value.trim() || '',
-            price: document.getElementById('prodPrice').value.trim() || '',
-            image: tempImageBase64
+            category: document.getElementById('prodCategory').value, name: name, brand: document.getElementById('prodBrand').value.trim() || '',
+            capacity: document.getElementById('prodCapacity').value.trim() || '', customTitle: document.getElementById('prodCustomTitle').value.trim() || '',
+            customValue: document.getElementById('prodCustomValue').value.trim() || '', price: document.getElementById('prodPrice').value.trim() || '',
+            dateTitle: document.getElementById('prodDateTitle').value.trim(), date: dateVal, tags: tagsArr, notes: document.getElementById('prodNotes').value.trim(), image: tempImageBase64
         };
 
         if (editingProductId) {
             const idx = products.findIndex(p => p.id === editingProductId);
             if(idx !== -1) products[idx] = { ...products[idx], ...prodData };
         } else {
-            prodData.id = Date.now();
-            products.push(prodData);
+            prodData.id = Date.now(); products.push(prodData);
         }
-
-        triggerUpdate();
-        
+        triggerUpdate(); 
         if (currentCategory !== '所有' && currentCategory !== prodData.category) changeCategory(prodData.category);
         else updateProductView();
-        
         closeModal('productModal');
     }
 
     function deleteProduct(id) {
         if(confirm('確定要永久刪除這個商品嗎？')) {
-            products = products.filter(p => p.id !== id);
-            delete cart[id];
-            selectedForBatch.delete(id);
-            triggerUpdate();
-            if (document.getElementById('cartModal').style.display === 'flex') {
-                renderCartTable();
-            }
+            products = products.filter(p => p.id !== id); delete cart[id]; selectedForBatch.delete(id); triggerUpdate();
+            if (document.getElementById('cartModal').style.display === 'flex') renderCartTable();
         }
+    }
+
+    function toggleDateSort() {
+        updateProductView();
+        setStore('date_sort_select', document.getElementById('dateSortSelect').value);
+    }
+
+    function handleSearchInput(e) {
+        const val = e.target.value.trim();
+        const sugg = document.getElementById('tagSuggestions');
+        if (val.startsWith('#')) {
+            const allTags = {};
+            products.forEach(p => { if(p.tags) p.tags.forEach(t => { allTags[t] = (allTags[t]||0) + 1; }); });
+            const topTags = Object.keys(allTags).sort((a,b) => allTags[b]-allTags[a]);
+            const searchTag = val.substring(1).toLowerCase();
+            const filteredTags = topTags.filter(t => t.toLowerCase().includes(searchTag)).slice(0, 5);
+            
+            if (filteredTags.length > 0) {
+                sugg.innerHTML = filteredTags.map(t => `<div class="tag-suggestion-item" onclick="selectTag('${t}')">#${t}</div>`).join('');
+                sugg.style.display = 'block';
+            } else sugg.style.display = 'none';
+        } else {
+            sugg.style.display = 'none';
+        }
+        updateProductView();
+    }
+
+    function selectTag(t) {
+        document.getElementById('searchInput').value = '#' + t;
+        document.getElementById('tagSuggestions').style.display = 'none';
+        updateProductView();
+    }
+
+    function openFieldSortModal() {
+        const list = document.getElementById('fieldSortList');
+        list.innerHTML = fieldOrder.map(f => `
+            <li class="sortable-item" draggable="true" data-field="${f}" ondragstart="fieldDragStart(event)" ondragover="allowDrop(event)" ondrop="fieldDrop(event)" ondragend="fieldDragEnd(event)">
+                <span>${fieldLabels[f]}</span><span>☰</span>
+            </li>
+        `).join('');
+        document.getElementById('fieldSortModal').style.display = 'flex';
+    }
+
+    function fieldDragStart(e) { draggedField = e.target.closest('.sortable-item'); setTimeout(()=> draggedField.style.opacity = '0.5', 0); }
+    function fieldDragEnd(e) { if(draggedField) draggedField.style.opacity = '1'; draggedField = null; }
+    function fieldDrop(e) {
+        e.preventDefault();
+        const target = e.target.closest('.sortable-item');
+        if(target && draggedField !== target) {
+            const list = document.getElementById('fieldSortList');
+            const items = [...list.querySelectorAll('.sortable-item')];
+            const draggedIdx = items.indexOf(draggedField);
+            const targetIdx = items.indexOf(target);
+            if(draggedIdx < targetIdx) target.after(draggedField); else target.before(draggedField);
+        }
+    }
+
+    function saveFieldOrder() {
+        const list = document.getElementById('fieldSortList');
+        fieldOrder = [...list.querySelectorAll('.sortable-item')].map(item => item.getAttribute('data-field'));
+        setStore('field_order', JSON.stringify(fieldOrder));
+        closeModal('fieldSortModal');
+        updateProductView();
+        showToast('欄位排序已儲存！');
     }
 
     function updateProductView() {
         const grid = document.getElementById('productGrid');
         const keyword = document.getElementById('searchInput').value.trim();
+        const searchDate = document.getElementById('searchDateInput').value;
         const brandF = document.getElementById('brandFilter').value;
         const capF = document.getElementById('capacityFilter').value;
         const minP = document.getElementById('minPriceF').value;
         const maxP = document.getElementById('maxPriceF').value;
+        const dateSortSelect = document.getElementById('dateSortSelect').value;
+        const searchDateFormatted = searchDate ? searchDate.replace(/-/g, '/') : '';
 
         let filtered = products.filter(p => {
             let matchCat = (currentCategory === '所有') ? true : (p.category === currentCategory);
-            let matchKey = p.name.includes(keyword) || (p.brand && p.brand.includes(keyword)) || (p.customValue && p.customValue.includes(keyword));
             let matchBrand = brandF === '' || p.brand === brandF;
             let matchCap = capF === '' || p.capacity === capF;
+            let matchDateFilter = searchDateFormatted === '' || p.date === searchDateFormatted;
             let matchPrice = true;
-            
             if (minP || maxP) {
                 const prodPrice = parseInt(p.price);
                 if (isNaN(prodPrice)) matchPrice = false;
@@ -1917,62 +1917,57 @@
                     if (maxP && prodPrice > parseInt(maxP)) matchPrice = false;
                 }
             }
-
-            if (keyword.length > 0) return matchKey; 
-            return matchCat && matchBrand && matchCap && matchPrice;
+            if (keyword.startsWith('#')) {
+                const searchTag = keyword.substring(1).toLowerCase();
+                if(searchTag && (!p.tags || !p.tags.some(t => t.toLowerCase().includes(searchTag)))) return false;
+            } else if (keyword.length > 0) {
+                return matchCat && (p.name.includes(keyword) || (p.brand && p.brand.includes(keyword)) || (p.customValue && p.customValue.includes(keyword))) && matchDateFilter;
+            }
+            return matchCat && matchBrand && matchCap && matchPrice && matchDateFilter;
         });
+
+        if (dateSortSelect === 'desc') {
+            filtered.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+        } else if (dateSortSelect === 'asc') {
+            filtered.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+        }
 
         const viewProducts = (currentCategory === '所有') ? products : products.filter(p => p.category === currentCategory);
         const brands = [...new Set(viewProducts.map(p => p.brand).filter(b => b))];
         const capacities = [...new Set(viewProducts.map(p => p.capacity).filter(c => c))];
-
-        updateSelect('brandFilter', '所有品牌', brands, brandF);
-        updateSelect('capacityFilter', '所有容量/規格', capacities, capF);
+        updateSelect('brandFilter', '所有品牌', brands, brandF); updateSelect('capacityFilter', '所有容量/規格', capacities, capF);
 
         if(filtered.length === 0) { grid.innerHTML = `<div class="empty-state">此條件下沒有商品。</div>`; return; }
 
         grid.innerHTML = filtered.map(p => {
             const qtyVal = cart[p.id] || 1;
-            
             let actionHtml = '';
-            if (isEditMode) {
-                actionHtml = `<label class="check-container edit-mode-check"><input type="checkbox" ${selectedForBatch.has(p.id) ? 'checked' : ''} onchange="toggleBatchSelect(${p.id}, this.checked)"> 選取移動</label>`;
-            } else if (isDeleteMode) {
-                actionHtml = `<label class="check-container edit-mode-check" style="color:#ff4757; border-color:#ff4757;"><input type="checkbox" ${selectedForBatch.has(p.id) ? 'checked' : ''} onchange="toggleBatchSelect(${p.id}, this.checked)"> 選取刪除</label>`;
-            } else {
-                actionHtml = `<div class="cart-action">
-                    <input type="number" id="qty_${p.id}" class="qty-input" min="1" max="100" value="${qtyVal}" onchange="updateQtyLimit(this); updateHomeQty(${p.id}, this.value)">
-                    <label class="check-container">
-                        <input type="checkbox" ${cart[p.id] ? 'checked' : ''} onchange="toggleCart(${p.id}, this.checked)"> 加入清單
-                    </label>
-                   </div>`;
-            }
+            if (isEditMode) actionHtml = `<label class="check-container edit-mode-check"><input type="checkbox" ${selectedForBatch.has(p.id)?'checked':''} onchange="toggleBatchSelect(${p.id}, this.checked)"> 選取移動</label>`;
+            else if (isDeleteMode) actionHtml = `<label class="check-container edit-mode-check" style="color:#ff4757; border-color:#ff4757;"><input type="checkbox" ${selectedForBatch.has(p.id)?'checked':''} onchange="toggleBatchSelect(${p.id}, this.checked)"> 選取刪除</label>`;
+            else actionHtml = `<div class="cart-action"><input type="number" id="qty_${p.id}" class="qty-input" min="1" max="100" value="${qtyVal}" onchange="updateQtyLimit(this); updateHomeQty(${p.id}, this.value)"><label class="check-container"><input type="checkbox" ${cart[p.id]?'checked':''} onchange="toggleCart(${p.id}, this.checked)"> 加入清單</label></div>`;
 
-            const categoryBadge = (currentCategory === '所有') ? `<div style="position:absolute; top:10px; left:10px; background:var(--primary-color); color:white; font-size:11px; padding:2px 8px; border-radius:10px;">${p.category}</div>` : '';
-            
-            const brandHtml = p.brand ? `<div class="product-meta">品牌: ${p.brand}</div>` : '';
-            const capacityHtml = p.capacity ? `<div class="product-meta">容量/規格: ${p.capacity}</div>` : '';
-            const customHtml = p.customTitle && p.customValue ? `<div class="product-meta">${p.customTitle}: ${p.customValue}</div>` : '';
-            const priceHtml = p.price ? `<div class="product-price">單價: $${p.price}</div>` : '';
-            
+            const categoryBadge = (currentCategory === '所有') ? `<div style="position:absolute; top:10px; left:10px; background:var(--primary-color); color:white; font-size:11px; padding:2px 8px; border-radius:10px; z-index:2;">${p.category}</div>` : '';
             const draggableAttrs = (!isEditMode && !isDeleteMode) ? `draggable="true" ondragstart="dragStart(event, 'prod', ${p.id})" ondragover="allowDrop(event)" ondrop="drop(event, 'prod', ${p.id})" ondragend="dragEnd(event)"` : '';
-
-            let borderStyle = '';
-            if ((isEditMode || isDeleteMode) && selectedForBatch.has(p.id)) {
-                borderStyle = `style="border: 2px solid ${isDeleteMode ? '#ff4757' : 'var(--edit-color)'};"`;
-            }
+            let borderStyle = ((isEditMode||isDeleteMode) && selectedForBatch.has(p.id)) ? `style="border: 2px solid ${isDeleteMode ? '#ff4757' : 'var(--edit-color)'};"` : '';
 
             let freqDropdownHtml = `
                 <div id="freq_dropdown_${p.id}" style="display:none; position:absolute; top:35px; right:5px; background:white; border:1px solid #ccc; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; padding:6px; min-width:140px; text-align:left;" onclick="event.stopPropagation()">
                     <div style="font-size:11px; color:#777; padding:4px 6px; border-bottom:1px solid #eee; margin-bottom:4px;">選擇常買清單：</div>
-                    ${frequentLists.length > 0 ? frequentLists.map(l => `
-                        <div onclick="addProdToSpecificFreq(${p.id}, ${l.id})" style="padding:6px 8px; font-size:13px; cursor:pointer; border-radius:4px; color:#333;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">${l.name}</div>
-                    `).join('') : '<div style="font-size:12px; color:#999; padding:4px;">尚無清單</div>'}
-                    ${frequentLists.length < 10 ? `
-                        <div onclick="addNewFreqAndAddProd(${p.id})" style="padding:6px 8px; font-size:13px; cursor:pointer; color:var(--primary-color); font-weight:bold; border-top:1px solid #eee; margin-top:4px; padding-top:6px;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">+ 新增常買清單</div>
-                    ` : ''}
+                    ${frequentLists.length > 0 ? frequentLists.map(l => `<div onclick="addProdToSpecificFreq(${p.id}, ${l.id})" style="padding:6px 8px; font-size:13px; cursor:pointer; border-radius:4px; color:#333;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">${l.name}</div>`).join('') : '<div style="font-size:12px; color:#999; padding:4px;">尚無清單</div>'}
+                    ${frequentLists.length < 10 ? `<div onclick="addNewFreqAndAddProd(${p.id})" style="padding:6px 8px; font-size:13px; cursor:pointer; color:var(--primary-color); font-weight:bold; border-top:1px solid #eee; margin-top:4px; padding-top:6px;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">+ 新增常買清單</div>` : ''}
                 </div>
             `;
+
+            const fieldHtmlMap = {
+                brand: p.brand ? `<div class="product-meta">品牌: ${p.brand}</div>` : '',
+                capacity: p.capacity ? `<div class="product-meta">容量/規格: ${p.capacity}</div>` : '',
+                custom: (p.customTitle && p.customValue) ? `<div class="product-meta">${p.customTitle}: ${p.customValue}</div>` : '',
+                price: p.price ? `<div class="product-price">單價: $${p.price}</div>` : '',
+                date: p.date ? `<div class="product-meta">${p.dateTitle || '日期'}: ${p.date}</div>` : '',
+                tags: (p.tags && p.tags.length > 0) ? `<div class="product-tags">${p.tags.map(t=>`<span class="product-tag">#${t}</span>`).join('')}</div>` : '',
+                notes: p.notes ? `<div class="product-notes">${p.notes}</div>` : ''
+            };
+            const sortedFieldsHtml = fieldOrder.map(f => fieldHtmlMap[f]).join('');
 
             return `
                 <div class="product-card" data-product-id="${p.id}" ${draggableAttrs} ${borderStyle}>
@@ -1987,109 +1982,44 @@
                     </div>
                     <img src="${p.image}" class="product-image" alt="${p.name}">
                     <div class="product-title">${p.name}</div>
-                    ${brandHtml}
-                    ${capacityHtml}
-                    ${customHtml}
-                    ${priceHtml}
+                    ${sortedFieldsHtml}
                     ${actionHtml}
                 </div>
             `;
         }).join('');
     }
 
-    function updateSelect(id, defaultText, options, currentValue) {
-        const sel = document.getElementById(id);
-        sel.innerHTML = `<option value="">${defaultText}</option>` + options.map(opt => `<option value="${opt}" ${opt === currentValue ? 'selected' : ''}>${opt}</option>`).join('');
-    }
-
-    function updateQtyLimit(el) {
-        let val = parseInt(el.value);
-        if (isNaN(val) || val < 1) el.value = 1;
-        if (val > 100) el.value = 100;
-    }
-
-    function toggleCart(id, isChecked) {
-        if (isChecked) {
-            if (Object.keys(cart).length >= 100 && !cart[id]) {
-                alert("檢視清單最多只能加入 100 個商品！");
-                updateProductView();
-                return;
-            }
-            const input = document.getElementById(`qty_${id}`);
-            cart[id] = input ? (parseInt(input.value) || 1) : 1;
-        } else {
-            delete cart[id];
-        }
-        triggerUpdate();
-    }
-
-    function updateHomeQty(id, val) {
-        if (cart[id]) {
-            cart[id] = parseInt(val) || 1;
-            triggerUpdate();
-        }
-    }
-
-    function updateModalQty(id, val) {
-        if (cart[id]) {
-            cart[id] = parseInt(val) || 1;
-            triggerUpdate();
-            if (document.getElementById('cartModal').style.display === 'flex') {
-                renderCartTable();
-            }
-        }
-    }
-
-    function updateCartDisplay() {
-        document.getElementById('cartCount').innerText = Object.keys(cart).length;
-    }
+    function updateSelect(id, defaultText, options, currentValue) { const sel = document.getElementById(id); sel.innerHTML = `<option value="">${defaultText}</option>` + options.map(opt => `<option value="${opt}" ${opt === currentValue ? 'selected' : ''}>${opt}</option>`).join(''); }
+    function updateQtyLimit(el) { let val = parseInt(el.value); if (isNaN(val) || val < 1) el.value = 1; if (val > 100) el.value = 100; }
+    function toggleCart(id, isChecked) { if (isChecked) { if (Object.keys(cart).length >= 100 && !cart[id]) { alert("檢視最多100個！"); updateProductView(); return; } const input = document.getElementById(`qty_${id}`); cart[id] = input ? (parseInt(input.value) || 1) : 1; } else { delete cart[id]; } triggerUpdate(); }
+    function updateHomeQty(id, val) { if (cart[id]) { cart[id] = parseInt(val) || 1; triggerUpdate(); } }
+    function updateModalQty(id, val) { if (cart[id]) { cart[id] = parseInt(val) || 1; triggerUpdate(); if (document.getElementById('cartModal').style.display === 'flex') renderCartTable(); } }
+    function updateCartDisplay() { document.getElementById('cartCount').innerText = Object.keys(cart).length; }
 
     function openCartModal() {
-        if (isEditMode) toggleEditMode();
-        if (isDeleteMode) toggleDeleteMode();
-        updateCartModalTitle();
-        document.getElementById('cartModal').style.display = 'flex';
-        loadExportColumns(); 
-        renderCartTable();
+        if (isEditMode) toggleEditMode(); if (isDeleteMode) toggleDeleteMode();
+        updateCartModalTitle(); document.getElementById('cartModal').style.display = 'flex';
+        loadExportColumns(); renderCartTable();
     }
     
-    function closeModal(modalId) {
-        document.getElementById(modalId).style.display = 'none';
-        triggerUpdate(); 
-    }
+    function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; triggerUpdate(); }
 
     function renderCartTable() {
         const tbody = document.getElementById('cartItems');
-        if (Object.keys(cart).length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" style="padding: 30px; color:#777;">目前清單是空的，請先將商品打勾加入清單。</td></tr>`;
-            return;
-        }
-
+        if (Object.keys(cart).length === 0) { tbody.innerHTML = `<tr><td colspan="10" style="padding: 30px; color:#777;">目前清單是空的，請先將商品打勾加入清單。</td></tr>`; return; }
         const selectedProducts = products.filter(p => cart[p.id]);
         tbody.innerHTML = selectedProducts.map(p => {
-            const qty = cart[p.id];
-            const price = parseInt(p.price) || 0;
-            const subtotal = price * qty;
-            
-            const priceText = price > 0 ? '$' + price : '-';
-            const subtotalText = price > 0 ? '$' + subtotal : '-';
-            const brandText = p.brand ? p.brand : '-';
-            const capacityText = p.capacity ? p.capacity : '-';
-            const customText = p.customTitle && p.customValue ? `${p.customTitle}: ${p.customValue}` : '-';
-
+            const qty = cart[p.id]; const price = parseInt(p.price) || 0; const subtotal = price * qty;
             return `
                 <tr>
                     <td class="col-img"><img src="${p.image}" alt="${p.name}"></td>
                     <td class="col-name">${p.name}</td>
-                    <td class="col-brand">${brandText}</td>
-                    <td class="col-cap">${capacityText}</td>
-                    <td class="col-custom">${customText}</td>
-                    <td class="col-qty">
-                        <input type="number" class="qty-input" value="${qty}" min="1" max="100" onchange="updateQtyLimit(this); updateModalQty(${p.id}, this.value)">
-                        <span class="print-qty">${qty}</span>
-                    </td>
-                    <td class="price-col col-price" style="color:var(--text-muted);">${priceText}</td>
-                    <td class="price-col col-subtotal" style="color:var(--warning-color); font-weight:bold;">${subtotalText}</td>
+                    <td class="col-brand">${p.brand ? p.brand : '-'}</td>
+                    <td class="col-cap">${p.capacity ? p.capacity : '-'}</td>
+                    <td class="col-custom">${(p.customTitle && p.customValue) ? `${p.customTitle}: ${p.customValue}` : '-'}</td>
+                    <td class="col-qty"><input type="number" class="qty-input" value="${qty}" min="1" max="100" onchange="updateQtyLimit(this); updateModalQty(${p.id}, this.value)"><span class="print-qty">${qty}</span></td>
+                    <td class="price-col col-price" style="color:var(--text-muted);">${price > 0 ? '$'+price : '-'}</td>
+                    <td class="price-col col-subtotal" style="color:var(--warning-color); font-weight:bold;">${price > 0 ? '$'+subtotal : '-'}</td>
                     <td class="col-check"><div class="export-checkbox"></div></td>
                     <td class="action-col"><span class="remove-btn" onclick="removeFromCart(${p.id})">刪除</span></td>
                 </tr>
@@ -2097,203 +2027,76 @@
         }).join('');
     }
 
-    function removeFromCart(id) {
-        delete cart[id];
-        triggerUpdate();
-        if (document.getElementById('cartModal').style.display === 'flex') {
-            renderCartTable();
-        }
+    function removeFromCart(id) { delete cart[id]; triggerUpdate(); if (document.getElementById('cartModal').style.display === 'flex') renderCartTable(); }
+    
+    function saveAsFrequentList() {
+        if(Object.keys(cart).length === 0) { alert('清單內沒有商品！'); return; }
+        const name = prompt('請為這個常駐清單命名：');
+        if(!name || !name.trim()) return;
+        const items = Object.keys(cart).map(id => ({ id: parseInt(id), qty: cart[id] }));
+        frequentLists.push({ id: Date.now(), name: name.trim(), items: items });
+        triggerUpdate(); showToast(`已存為常駐清單「${name.trim()}」`);
     }
 
-    function togglePriceExport() {
-        const isChecked = document.getElementById('showPriceToggle').checked;
-        const area = document.getElementById('export-area');
-        if (isChecked) {
-            area.classList.remove('hide-prices');
-        } else {
-            area.classList.add('hide-prices');
-        }
+    function prepareExport(currentTitleText) {
+        const area = document.getElementById('export-area'); area.classList.add('exporting');
+        const exportHeaderEl = document.getElementById('exportHeaderTitle'); exportHeaderEl.innerText = currentTitleText; exportHeaderEl.style.display = 'block';
+        let total = 0; products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
+        document.getElementById('exportDate').innerHTML = `<div class="export-total-line">預估總金額：$${total}</div><div>匯出日期: ${new Date().toLocaleDateString('zh-TW')}</div>`;
+        document.getElementById('exportDate').style.display = 'block';
+        document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none'); 
+        area.style.border = "1px solid #ccc"; return area;
+    }
+
+    function finalizeExport(area) {
+        document.getElementById('exportHeaderTitle').style.display = 'none'; document.getElementById('exportDate').style.display = 'none';
+        document.querySelectorAll('.action-col').forEach(el => el.style.display = ''); 
+        area.style.border = "none"; area.classList.remove('exporting');
     }
 
     function exportToImage() {
         if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法匯出喔！'); return; }
-        const area = document.getElementById('export-area');
-        
-        area.classList.add('exporting');
-        
-        const currentTitleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
-        const exportHeaderEl = document.getElementById('exportHeaderTitle');
-        exportHeaderEl.innerText = currentTitleText;
-        exportHeaderEl.style.display = 'block';
-        
-        let total = 0;
-        products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
-        
-        const dateHtml = `
-            <div class="export-total-line">預估總金額：$${total}</div>
-            <div>匯出日期: ${new Date().toLocaleDateString('zh-TW')}</div>
-        `;
-        document.getElementById('exportDate').innerHTML = dateHtml;
-        document.getElementById('exportDate').style.display = 'block';
-        
-        const actions = document.querySelectorAll('.action-col');
-        actions.forEach(el => el.style.display = 'none'); 
-        area.style.border = "1px solid #ccc"; 
-
+        const area = prepareExport(document.getElementById('siteTitle').innerText.trim() || '待購清單');
         html2canvas(area, { scale: 3, useCORS: true }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = `${currentTitleText}.jpg`;
-            link.href = canvas.toDataURL('image/jpeg', 0.95);
-            link.click();
-
-            exportHeaderEl.style.display = 'none';
-            document.getElementById('exportDate').style.display = 'none';
-            actions.forEach(el => el.style.display = ''); 
-            area.style.border = "none";
-            area.classList.remove('exporting');
+            const link = document.createElement('a'); link.download = `${document.getElementById('siteTitle').innerText.trim() || '待購清單'}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.95); link.click(); finalizeExport(area);
         });
     }
 
     function shareToClipboard() {
         if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法複製喔！'); return; }
-        const area = document.getElementById('export-area');
-        
-        area.classList.add('exporting');
-        
-        const currentTitleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
-        const exportHeaderEl = document.getElementById('exportHeaderTitle');
-        exportHeaderEl.innerText = currentTitleText;
-        exportHeaderEl.style.display = 'block';
-        
-        let total = 0;
-        products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
-        
-        const dateHtml = `
-            <div class="export-total-line">預估總金額：$${total}</div>
-            <div>匯出日期: ${new Date().toLocaleDateString('zh-TW')}</div>
-        `;
-        document.getElementById('exportDate').innerHTML = dateHtml;
-        document.getElementById('exportDate').style.display = 'block';
-        
-        const actions = document.querySelectorAll('.action-col');
-        actions.forEach(el => el.style.display = 'none'); 
-        area.style.border = "1px solid #ccc"; 
-
+        const area = prepareExport(document.getElementById('siteTitle').innerText.trim() || '待購清單');
         html2canvas(area, { scale: 3, useCORS: true }).then(canvas => {
             canvas.toBlob(blob => {
                 if (navigator.clipboard && window.ClipboardItem) {
-                    navigator.clipboard.write([
-                        new ClipboardItem({ 'image/png': blob })
-                    ]).then(() => {
-                        showToast('已複製清單圖片到剪貼簿，可直接貼上！');
-                    }).catch(err => {
-                        alert('複製圖片失敗，請使用匯出 JPG 功能。');
-                    });
-                } else {
-                    alert('您的瀏覽器不支援直接複製圖片，請使用匯出 JPG 功能。');
-                }
-
-                exportHeaderEl.style.display = 'none';
-                document.getElementById('exportDate').style.display = 'none';
-                actions.forEach(el => el.style.display = ''); 
-                area.style.border = "none";
-                area.classList.remove('exporting');
+                    navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => { showToast('已複製清單圖片到剪貼簿，可直接貼上！'); }).catch(() => { alert('複製失敗，請使用匯出 JPG。'); });
+                } else alert('您的瀏覽器不支援直接複製，請匯出 JPG。');
+                finalizeExport(area);
             }, 'image/png');
         });
     }
 
     function shareToNative() {
         if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法分享喔！'); return; }
-        const area = document.getElementById('export-area');
-        
-        area.classList.add('exporting');
-        
-        const currentTitleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
-        const exportHeaderEl = document.getElementById('exportHeaderTitle');
-        exportHeaderEl.innerText = currentTitleText;
-        exportHeaderEl.style.display = 'block';
-        
-        let total = 0;
-        products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
-        
-        const dateHtml = `
-            <div class="export-total-line">預估總金額：$${total}</div>
-            <div>匯出日期: ${new Date().toLocaleDateString('zh-TW')}</div>
-        `;
-        document.getElementById('exportDate').innerHTML = dateHtml;
-        document.getElementById('exportDate').style.display = 'block';
-        
-        const actions = document.querySelectorAll('.action-col');
-        actions.forEach(el => el.style.display = 'none'); 
-        area.style.border = "1px solid #ccc"; 
-
+        const title = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+        const area = prepareExport(title);
         html2canvas(area, { scale: 3, useCORS: true }).then(canvas => {
             canvas.toBlob(blob => {
-                const file = new File([blob], `${currentTitleText}.jpg`, { type: 'image/jpeg' });
-
+                const file = new File([blob], `${title}.jpg`, { type: 'image/jpeg' });
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    navigator.share({
-                        files: [file],
-                        title: currentTitleText,
-                        text: '分享我的待購清單'
-                    }).then(() => {
-                        showToast('已開啟分享面板！');
-                    }).catch(err => {
-                        if (err.name !== 'AbortError') console.log(err);
-                    });
-                } else {
-                    alert('您的裝置或瀏覽器不支援直接分享圖片，請使用電腦版進行操作。');
-                }
-
-                exportHeaderEl.style.display = 'none';
-                document.getElementById('exportDate').style.display = 'none';
-                actions.forEach(el => el.style.display = ''); 
-                area.style.border = "none";
-                area.classList.remove('exporting');
+                    navigator.share({ files: [file], title: title, text: '分享我的待購清單' }).then(() => { showToast('已開啟分享面板！'); }).catch(e => { if (e.name !== 'AbortError') console.log(e); });
+                } else alert('您的裝置不支援直接分享圖片，請使用電腦版進行操作。');
+                finalizeExport(area);
             }, 'image/jpeg', 0.95);
         });
     }
 
     function exportToPDF() {
         if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法匯出喔！'); return; }
-        const area = document.getElementById('export-area');
-        
-        area.classList.add('exporting');
-        
-        const currentTitleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
-        const exportHeaderEl = document.getElementById('exportHeaderTitle');
-        exportHeaderEl.innerText = currentTitleText;
-        exportHeaderEl.style.display = 'block';
-        
-        let total = 0;
-        products.forEach(p => { if (cart[p.id]) total += (parseInt(p.price) || 0) * cart[p.id]; });
-        
-        const dateHtml = `
-            <div class="export-total-line">預估總金額：$${total}</div>
-            <div>匯出日期: ${new Date().toLocaleDateString('zh-TW')}</div>
-        `;
-        document.getElementById('exportDate').innerHTML = dateHtml;
-        document.getElementById('exportDate').style.display = 'block';
-        
-        const actions = document.querySelectorAll('.action-col');
-        actions.forEach(el => el.style.display = 'none'); 
-        area.style.border = "1px solid #ccc"; 
-
-        const opt = {
-            margin:       10,
-            filename:     `${currentTitleText}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 3, useCORS: true },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        html2pdf().from(area).set(opt).save().then(() => {
-            exportHeaderEl.style.display = 'none';
-            document.getElementById('exportDate').style.display = 'none';
-            actions.forEach(el => el.style.display = ''); 
-            area.style.border = "none";
-            area.classList.remove('exporting');
-        });
+        const title = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+        const area = prepareExport(title);
+        const opt = { margin: 10, filename: `${title}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 3, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+        html2pdf().from(area).set(opt).save().then(() => { finalizeExport(area); });
     }
 
     init();
