@@ -60,7 +60,7 @@
         .btn-bulk:hover { background-color: #219653; }
 
         .freq-bar { display: flex; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px dashed #eee; width: 100%; justify-content: space-between; flex-wrap: wrap; }
-        .freq-bar-title { font-size: 14px; font-weight: bold; color: var(--freq-color); }
+        .freq-bar-title { font-size: 14px; font-weight: bold; color: var(--freq-color); flex-shrink: 0; }
         .btn-freq { padding: 5px 15px; background: #ffe0df; color: var(--freq-color); border: 1px solid var(--freq-color); border-radius: 15px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; }
         .btn-freq:hover { background: var(--freq-color); color: white; }
 
@@ -109,16 +109,26 @@
         .product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
         @media(max-width: 1024px) { .product-grid { grid-template-columns: repeat(3, 1fr); } }
 
-        .product-card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 15px; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: transform 0.2s; cursor: default; }
+        /* 固定大小的商品卡片，圖片不壓縮且內部完整支援捲動 */
+        .product-card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 15px; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: transform 0.2s; cursor: default; width: 100%; height: 380px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
         .product-card.dragging { opacity: 0.4; transform: scale(0.95); }
         .product-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
-        .product-image { width: 100%; height: 160px; object-fit: contain; margin-bottom: 15px; background: white; border-radius: 5px; pointer-events: none; }
-        .product-title { font-size: 16px; font-weight: bold; margin-bottom: 5px; pointer-events: none; }
-        .product-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 5px; pointer-events: none; }
-        .product-price { font-size: 14px; font-weight: bold; color: var(--warning-color); margin-bottom: 5px; pointer-events: none; }
-        .product-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 5px; }
+        .product-image { width: 100%; height: 120px; object-fit: contain; margin-bottom: 8px; background: white; border-radius: 5px; pointer-events: none; flex-shrink: 0; }
+        
+        .product-title { font-size: 16px; font-weight: bold; margin-bottom: 5px; pointer-events: auto; display: flex; align-items: center; justify-content: center; word-break: break-all; flex-shrink: 0; }
+
+        .product-details { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 4px; pointer-events: auto; text-align: center; padding-right: 2px; }
+        .product-details::-webkit-scrollbar { width: 4px; }
+        .product-details::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+        .product-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 3px; word-break: break-all; flex-shrink: 0; }
+        .product-price { font-size: 14px; font-weight: bold; color: var(--warning-color); margin-bottom: 3px; flex-shrink: 0; }
+        .product-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 3px; flex-shrink: 0; }
         .product-tag { font-size: 11px; background: #e6f7ff; color: var(--primary-color); padding: 2px 6px; border-radius: 10px; }
-        .product-notes { font-size: 12px; color: #555; background: #f9f9f9; padding: 5px; border-radius: 4px; max-height: 50px; overflow-y: auto; text-align: left; margin-bottom: 5px; pointer-events: auto; cursor: text; }
+        
+        /* 備註預設顯示兩行，支援互動捲動查看完整內容，且不被擠壓 */
+        .product-notes { font-size: 12px; color: #555; background: #f9f9f9; padding: 5px; border-radius: 4px; text-align: left; margin-bottom: 3px; pointer-events: auto; cursor: text; word-break: break-all; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex-shrink: 0; }
+        .product-notes:hover { display: block; max-height: 100px; overflow-y: auto; }
         
         .action-btns { position: absolute; top: 10px; right: 10px; display: none; gap: 4px; z-index: 10; }
         .product-card:hover .action-btns { display: flex; }
@@ -127,11 +137,11 @@
         .btn-del-prod { background: rgba(255, 71, 87, 0.1); color: #ff4757; }
         .btn-edit-prod { background: rgba(74, 144, 226, 0.1); color: #4a90e2; }
         
-        .cart-action { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #eee; flex-wrap: wrap; }
+        .cart-action { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: auto; padding-top: 8px; border-top: 1px dashed #eee; flex-shrink: 0; flex-wrap: wrap; }
         .qty-input { width: 50px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 14px; cursor: text; }
         .check-container { display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; font-size: 14px; margin: 0;}
         .check-container input { width: 18px; height: 18px; cursor: pointer; margin: 0; }
-        .check-container.edit-mode-check { color: var(--edit-color); font-weight: bold; padding-top:15px; border-top: 1px dashed var(--edit-color); margin-top: 10px; }
+        .check-container.edit-mode-check { color: var(--edit-color); font-weight: bold; padding-top:10px; border-top: 1px dashed var(--edit-color); margin-top: auto; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
         .modal-content { background: white; width: 900px; max-height: 90vh; border-radius: 10px; padding: 30px; overflow-y: auto; position: relative; }
@@ -143,6 +153,19 @@
         .form-group input[type="text"], .form-group input[type="number"], .form-group input[type="date"], .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
         .btn-submit { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 10px; font-weight: bold; }
         
+        /* 單行滾動輸入框 (防止太長看不見) */
+        .single-line-scroll {
+            white-space: pre;
+            overflow-x: auto;
+            overflow-y: hidden;
+            resize: none;
+            line-height: normal;
+        }
+        .form-group .single-line-scroll { height: 45px; }
+        .bulk-row .single-line-scroll, .batch-edit-row .single-line-scroll { padding: 6px 8px; height: 32px; width: 100%; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none; background: white; box-sizing: border-box; }
+        .single-line-scroll::-webkit-scrollbar { height: 6px; }
+        .single-line-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
         /* 排序設定列表 */
         .sortable-list { list-style: none; padding: 0; margin-bottom: 15px; }
         .sortable-item { background: #f9f9f9; border: 1px solid #ddd; margin-bottom: 5px; padding: 10px; border-radius: 4px; cursor: grab; display: flex; align-items: center; justify-content: space-between; }
@@ -188,13 +211,6 @@
         }
         .context-menu-item { padding: 8px 16px; cursor: pointer; font-size: 14px; color: #333; }
         .context-menu-item:hover { background: #f0f0f0; }
-
-        .bulk-row input[type="text"], .bulk-row input[type="number"], .bulk-row input[type="date"], .bulk-row select, .bulk-row textarea,
-        .batch-edit-row input[type="text"], .batch-edit-row input[type="number"], .batch-edit-row input[type="date"], .batch-edit-row select, .batch-edit-row textarea {
-            width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none; background: white; box-sizing: border-box;
-        }
-        .bulk-row input:focus, .bulk-row select:focus, .bulk-row textarea:focus,
-        .batch-edit-row input:focus, .batch-edit-row select:focus, .batch-edit-row textarea:focus { border-color: var(--primary-color); }
 
         .desktop-only-btn { display: inline-block; }
         .mobile-collapse-bar { display: none; }
@@ -429,7 +445,7 @@
         </div>
         <div class="form-group">
             <label>品名 (必填)</label>
-            <input type="text" id="prodName" placeholder="例如: 富士蘋果">
+            <textarea id="prodName" wrap="off" rows="1" class="single-line-scroll" placeholder="例如: 富士蘋果"></textarea>
         </div>
         <div class="form-group">
             <label>品牌 (選填)</label>
@@ -438,7 +454,7 @@
         </div>
         <div class="form-group">
             <label>容量/規格 (選填)</label>
-            <input type="text" id="prodCapacity" placeholder="例如: 3顆裝">
+            <textarea id="prodCapacity" wrap="off" rows="1" class="single-line-scroll" placeholder="例如: 3顆裝"></textarea>
         </div>
         <div class="form-group">
             <label>價格 (選填)</label>
@@ -447,48 +463,52 @@
         <div class="form-group" style="display: flex; gap: 10px;">
             <div style="flex: 1;">
                 <label>日期標題 (選填)</label>
-                <input type="text" id="prodDateTitle" placeholder="預設: 日期">
+                <textarea id="prodDateTitle" wrap="off" rows="1" class="single-line-scroll" placeholder="預設: 日期"></textarea>
             </div>
             <div style="flex: 1;">
                 <label>日期 (選填)</label>
                 <input type="date" id="prodDate" placeholder="yyyy/mm/dd">
             </div>
         </div>
+        <div class="form-group">
+            <label>連結 (選填)</label>
+            <textarea id="prodLink" wrap="off" rows="1" class="single-line-scroll" placeholder="例如: https://..."></textarea>
+        </div>
         <div class="form-group" style="display: flex; gap: 10px;">
             <div style="flex: 1;">
                 <label>自定義標題 (選填)</label>
-                <input type="text" id="prodCustomTitle" placeholder="例如: 甜度">
+                <textarea id="prodCustomTitle" wrap="off" rows="1" class="single-line-scroll" placeholder="例如: 甜度"></textarea>
             </div>
             <div style="flex: 2;">
                 <label>自定義內容 (選填)</label>
-                <input type="text" id="prodCustomValue" placeholder="例如: 微糖">
+                <textarea id="prodCustomValue" wrap="off" rows="1" class="single-line-scroll" placeholder="例如: 微糖"></textarea>
             </div>
         </div>
         <div class="form-group">
             <label>標籤 (選填，最多3個)</label>
-            <input type="text" id="prodTags" placeholder="用逗號分隔，例如: 特價,生鮮">
+            <textarea id="prodTags" wrap="off" rows="1" class="single-line-scroll" placeholder="用逗號分隔，例如: 特價,生鮮"></textarea>
         </div>
         <div class="form-group">
             <label>備註 (選填，不限字數)</label>
-            <textarea id="prodNotes" placeholder="輸入備註事項..." style="height: 80px; resize: vertical;"></textarea>
+            <textarea id="prodNotes" placeholder="輸入備註事項..." style="height: 80px; resize: vertical; word-break: break-all; white-space: pre-wrap;"></textarea>
         </div>
         
         <button class="btn-submit" onclick="saveProduct()">儲存商品</button>
     </div>
 </div>
 
-<!-- 大量新增商品彈窗 (Excel 格式) -->
+<!-- 大量新增商品彈窗 -->
 <div class="modal-overlay" id="bulkModal">
-    <div class="modal-content" style="width: 1400px; max-width: 95%;">
+    <div class="modal-content" style="width: 1550px; max-width: 95%;">
         <span class="modal-close" onclick="closeModal('bulkModal')">&times;</span>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-            <h2>大量新增商品 (Excel 表格格式)</h2>
+            <h2>大量新增商品</h2>
             <div>
                 <label style="font-weight: bold; font-size: 14px;">列數：<input type="number" id="bulkRowCount" value="5" min="1" max="50" style="width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px;" onchange="renderBulkTableRows()"></label>
             </div>
         </div>
         <div class="table-wrapper" style="max-height: 450px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px;">
-            <table class="export-table" style="min-width: 1400px; margin: 0;">
+            <table class="export-table" style="min-width: 1550px; margin: 0;">
                 <thead>
                     <tr>
                         <th style="width:90px;">圖片選擇</th>
@@ -499,6 +519,7 @@
                         <th style="width:80px;">價格</th>
                         <th style="width:100px;">日期標題</th>
                         <th style="width:120px;">日期</th>
+                        <th style="width:120px;">連結</th>
                         <th style="width:100px;">自訂標題</th>
                         <th style="width:100px;">自訂內容</th>
                         <th style="width:120px;">標籤(逗號分隔)</th>
@@ -512,16 +533,16 @@
     </div>
 </div>
 
-<!-- 批次修改商品彈窗 (Excel 格式) -->
+<!-- 批次修改商品彈窗 -->
 <div class="modal-overlay" id="batchEditModal">
-    <div class="modal-content" style="width: 1400px; max-width: 95%;">
+    <div class="modal-content" style="width: 1550px; max-width: 95%;">
         <span class="modal-close" onclick="closeModal('batchEditModal')">&times;</span>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <h2>批次修改商品</h2>
             <span style="font-size: 13px; color: #666;">（目前僅顯示符合搜尋及篩選條件的商品）</span>
         </div>
         <div class="table-wrapper" style="max-height: 450px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px;">
-            <table class="export-table" style="min-width: 1400px; margin: 0;">
+            <table class="export-table" style="min-width: 1550px; margin: 0;">
                 <thead>
                     <tr>
                         <th style="width:90px;">圖片更換</th>
@@ -532,6 +553,7 @@
                         <th style="width:80px;">價格</th>
                         <th style="width:100px;">日期標題</th>
                         <th style="width:120px;">日期</th>
+                        <th style="width:120px;">連結</th>
                         <th style="width:100px;">自訂標題</th>
                         <th style="width:100px;">自訂內容</th>
                         <th style="width:120px;">標籤(逗號分隔)</th>
@@ -704,6 +726,7 @@
     
     const defaultFieldOrder = ['brand', 'capacity', 'custom', 'price', 'date', 'tags', 'notes'];
     let fieldOrder = JSON.parse(getStore('field_order')) || defaultFieldOrder;
+    fieldOrder = fieldOrder.filter(f => f !== 'link');
     let draggedField = null;
 
     const fieldLabels = {
@@ -754,6 +777,9 @@
                 setStore('all_cats', JSON.stringify(allCategories));
             }
         }
+
+        // 確保舊商品資料皆具備 link 屬性，避免未定義報錯
+        products.forEach(p => { if (p.link === undefined) p.link = ''; });
 
         const savedBudget = getStore('budget');
         if (canPersist && savedBudget) document.getElementById('budgetInput').value = savedBudget;
@@ -1080,16 +1106,17 @@
                 <tr class="bulk-row">
                     <td><input type="file" class="bulk-img" accept="image/png, image/jpeg, image/webp" style="font-size: 11px; width: 90px; padding: 2px;"></td>
                     <td><select class="bulk-cat" onfocus="this.dataset.oldValue = this.value" onchange="handleCategorySelectChange(this)">${catOptions}</select></td>
-                    <td><input type="text" class="bulk-name" placeholder="例如: 蘋果"></td>
-                    <td><input type="text" class="bulk-brand" placeholder="品牌"></td>
-                    <td><input type="text" class="bulk-cap" placeholder="規格"></td>
+                    <td><textarea class="bulk-name single-line-scroll" wrap="off" rows="1" placeholder="例如: 蘋果"></textarea></td>
+                    <td><textarea class="bulk-brand single-line-scroll" wrap="off" rows="1" placeholder="品牌"></textarea></td>
+                    <td><textarea class="bulk-cap single-line-scroll" wrap="off" rows="1" placeholder="規格"></textarea></td>
                     <td><input type="number" class="bulk-price" placeholder="100" min="0"></td>
-                    <td><input type="text" class="bulk-date-title" placeholder="日期標題"></td>
+                    <td><textarea class="bulk-date-title single-line-scroll" wrap="off" rows="1" placeholder="日期標題"></textarea></td>
                     <td><input type="date" class="bulk-date"></td>
-                    <td><input type="text" class="bulk-cust-title" placeholder="自訂標題"></td>
-                    <td><input type="text" class="bulk-cust-val" placeholder="自訂內容"></td>
-                    <td><input type="text" class="bulk-tags" placeholder="最多3個,隔開"></td>
-                    <td><textarea class="bulk-notes" placeholder="備註..." style="height:32px; resize:vertical; padding:4px;"></textarea></td>
+                    <td><textarea class="bulk-link single-line-scroll" wrap="off" rows="1" placeholder="網址"></textarea></td>
+                    <td><textarea class="bulk-cust-title single-line-scroll" wrap="off" rows="1" placeholder="自訂標題"></textarea></td>
+                    <td><textarea class="bulk-cust-val single-line-scroll" wrap="off" rows="1" placeholder="自訂內容"></textarea></td>
+                    <td><textarea class="bulk-tags single-line-scroll" wrap="off" rows="1" placeholder="最多3個,隔開"></textarea></td>
+                    <td><textarea class="bulk-notes" placeholder="備註..." style="height:32px; resize:vertical; padding:4px; word-break: break-all; white-space: pre-wrap;"></textarea></td>
                 </tr>
             `;
         }
@@ -1119,6 +1146,7 @@
                         price: row.querySelector('.bulk-price').value.trim(),
                         dateTitle: row.querySelector('.bulk-date-title').value.trim(),
                         date: dateVal,
+                        link: row.querySelector('.bulk-link').value.trim(),
                         tags: tagsArr,
                         notes: row.querySelector('.bulk-notes').value.trim()
                     };
@@ -1181,16 +1209,17 @@
                     <input type="file" class="be-img" accept="image/png, image/jpeg, image/webp" style="font-size: 11px; width: 85px; padding: 2px;">
                 </td>
                 <td><select class="be-cat" onfocus="this.dataset.oldValue = this.value" onchange="handleCategorySelectChange(this)">${allCategories.map(c => `<option value="${c}" ${c===p.category?'selected':''}>${c}</option>`).join('')}<option value="__NEW__" style="color:var(--primary-color); font-weight:bold;">+ 建立新分類</option></select></td>
-                <td><input type="text" class="be-name" value="${p.name}"></td>
-                <td><input type="text" class="be-brand" value="${p.brand||''}"></td>
-                <td><input type="text" class="be-cap" value="${p.capacity||''}"></td>
+                <td><textarea class="be-name single-line-scroll" wrap="off" rows="1">${p.name}</textarea></td>
+                <td><textarea class="be-brand single-line-scroll" wrap="off" rows="1">${p.brand||''}</textarea></td>
+                <td><textarea class="be-cap single-line-scroll" wrap="off" rows="1">${p.capacity||''}</textarea></td>
                 <td><input type="number" class="be-price" value="${p.price||''}"></td>
-                <td><input type="text" class="be-date-title" value="${p.dateTitle||''}"></td>
+                <td><textarea class="be-date-title single-line-scroll" wrap="off" rows="1">${p.dateTitle||''}</textarea></td>
                 <td><input type="date" class="be-date" value="${p.date ? p.date.replace(/\//g,'-') : ''}"></td>
-                <td><input type="text" class="be-cust-title" value="${p.customTitle||''}"></td>
-                <td><input type="text" class="be-cust-val" value="${p.customValue||''}"></td>
-                <td><input type="text" class="be-tags" value="${(p.tags||[]).join(',')}"></td>
-                <td><textarea class="be-notes" style="height:32px; resize:vertical; padding:4px;">${p.notes||''}</textarea></td>
+                <td><textarea class="be-link single-line-scroll" wrap="off" rows="1">${p.link||''}</textarea></td>
+                <td><textarea class="be-cust-title single-line-scroll" wrap="off" rows="1">${p.customTitle||''}</textarea></td>
+                <td><textarea class="be-cust-val single-line-scroll" wrap="off" rows="1">${p.customValue||''}</textarea></td>
+                <td><textarea class="be-tags single-line-scroll" wrap="off" rows="1">${(p.tags||[]).join(',')}</textarea></td>
+                <td><textarea class="be-notes" style="height:32px; resize:vertical; padding:4px; word-break: break-all; white-space: pre-wrap;">${p.notes||''}</textarea></td>
             </tr>
         `).join('');
         document.getElementById('batchEditModal').style.display = 'flex';
@@ -1214,6 +1243,7 @@
                         p.dateTitle = row.querySelector('.be-date-title').value.trim();
                         let d = row.querySelector('.be-date').value;
                         p.date = d ? d.replace(/-/g, '/') : '';
+                        p.link = row.querySelector('.be-link').value.trim();
                         p.customTitle = row.querySelector('.be-cust-title').value.trim();
                         p.customValue = row.querySelector('.be-cust-val').value.trim();
                         const tagsRaw = row.querySelector('.be-tags').value.trim();
@@ -1383,7 +1413,9 @@
             } else if(data.allCategories) { allCategories = data.allCategories; }
             if(!allCategories.includes('未分類')) allCategories.unshift('未分類');
             
-            if (data.products) products = data.products;
+            if (data.products) {
+                products = data.products.map(p => ({ ...p, link: p.link || '' }));
+            }
             if (data.frequentLists) frequentLists = data.frequentLists;
         } else if (mode === 'append') {
             let catsToImport = data.allCategories || data.customCategories || [];
@@ -1392,6 +1424,7 @@
             });
             if(data.products) {
                 data.products.forEach(ip => {
+                    ip.link = ip.link || '';
                     let existInUncat = products.find(p => p.name === ip.name && p.category === '未分類');
                     if (existInUncat) {
                         existInUncat.category = ip.category;
@@ -1796,6 +1829,7 @@
         document.getElementById('prodName').value = ''; document.getElementById('prodBrand').value = ''; document.getElementById('prodCapacity').value = '';
         document.getElementById('prodCustomTitle').value = ''; document.getElementById('prodCustomValue').value = ''; document.getElementById('prodPrice').value = '';
         document.getElementById('prodDateTitle').value = ''; document.getElementById('prodDate').value = ''; 
+        document.getElementById('prodLink').value = '';
         document.getElementById('prodTags').value = ''; document.getElementById('prodNotes').value = '';
         document.getElementById('prodImage').value = ''; tempImageBase64 = fallbackImage; document.getElementById('productModal').style.display = 'flex';
     }
@@ -1810,6 +1844,7 @@
         document.getElementById('prodDateTitle').value = p.dateTitle || '';
         let dVal = p.date || ''; if(dVal.includes('/')) dVal = dVal.replace(/\//g, '-');
         document.getElementById('prodDate').value = dVal;
+        document.getElementById('prodLink').value = p.link || '';
         document.getElementById('prodTags').value = (p.tags||[]).join(',');
         document.getElementById('prodNotes').value = p.notes || '';
         document.getElementById('prodImage').value = ''; tempImageBase64 = p.image; document.getElementById('productModal').style.display = 'flex';
@@ -1829,7 +1864,8 @@
             category: document.getElementById('prodCategory').value, name: name, brand: document.getElementById('prodBrand').value.trim() || '',
             capacity: document.getElementById('prodCapacity').value.trim() || '', customTitle: document.getElementById('prodCustomTitle').value.trim() || '',
             customValue: document.getElementById('prodCustomValue').value.trim() || '', price: document.getElementById('prodPrice').value.trim() || '',
-            dateTitle: document.getElementById('prodDateTitle').value.trim(), date: dateVal, tags: tagsArr, notes: document.getElementById('prodNotes').value.trim(), image: tempImageBase64
+            dateTitle: document.getElementById('prodDateTitle').value.trim(), date: dateVal, link: document.getElementById('prodLink').value.trim(),
+            tags: tagsArr, notes: document.getElementById('prodNotes').value.trim(), image: tempImageBase64
         };
 
         if (editingProductId) {
@@ -1991,6 +2027,8 @@
                 notes: p.notes ? `<div class="product-notes">${p.notes}</div>` : ''
             };
             const sortedFieldsHtml = fieldOrder.map(f => fieldHtmlMap[f]).join('');
+            
+            const linkBtn = p.link ? `<a href="${p.link.startsWith('http') ? p.link : 'https://' + p.link}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none; margin-right:4px;" title="前往連結">🔗</a>` : '';
 
             return `
                 <div class="product-card" data-product-id="${p.id}" ${draggableAttrs} ${borderStyle}>
@@ -2004,8 +2042,10 @@
                         <button class="card-btn btn-del-prod" onclick="deleteProduct(${p.id})" title="刪除商品">✖</button>
                     </div>
                     <img src="${p.image}" class="product-image" alt="${p.name}">
-                    <div class="product-title">${p.name}</div>
-                    ${sortedFieldsHtml}
+                    <div class="product-title">${linkBtn}${p.name}</div>
+                    <div class="product-details">
+                        ${sortedFieldsHtml}
+                    </div>
                     ${actionHtml}
                 </div>
             `;
