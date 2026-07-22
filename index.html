@@ -562,8 +562,8 @@
 <div class="modal-overlay" id="cartModal">
     <div class="modal-content">
         <span class="modal-close" onclick="closeModal('cartModal')">&times;</span>
-        <h2 id="cartModalTitle">待購清單確認</h2>
-        <p style="margin-bottom: 10px; color: #777; font-size: 13px;">確認無誤後點擊匯出。表格可左右滑動查看。</p>
+        <h2><span id="cartModalTitle" class="editable-text" contenteditable="true" onblur="saveCartTitleCustom()" title="點擊即可更改清單標題">待購清單確認</span></h2>
+        <p style="margin-bottom: 10px; margin-top: 5px; color: #777; font-size: 13px;">確認無誤後點擊匯出。表格可左右滑動查看。</p>
         
         <div style="display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <div style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -744,6 +744,7 @@
                 if (data.siteTitle) { document.getElementById('siteTitle').innerText = data.siteTitle; setStore('custom_title', data.siteTitle); }
                 if (data.siteSubtitle) { document.getElementById('siteSubtitle').innerText = data.siteSubtitle; setStore('custom_subtitle', data.siteSubtitle); }
                 if (data.freqBarTitle) { document.getElementById('freqBarTitleText').innerText = data.freqBarTitle; setStore('custom_freq_title', data.freqBarTitle); }
+                if (data.cartTitle) { document.getElementById('cartModalTitle').innerText = data.cartTitle; setStore('custom_cart_title', data.cartTitle); }
                 saveData(); 
             } catch (err) { console.error('Failed to parse share data from URL', err); }
         } else {
@@ -916,7 +917,7 @@
         if (confirm('確定要一鍵恢復為預設網頁嗎？\n這將會清除所有您新增的商品、分類、常買清單與自訂設定！')) {
             rmStore('all_cats'); rmStore('prods'); rmStore('freq_lists');
             rmStore('budget'); rmStore('custom_title'); rmStore('custom_subtitle');
-            rmStore('custom_freq_title'); rmStore('export_cols'); rmStore('desktop_mode');
+            rmStore('custom_freq_title'); rmStore('custom_cart_title'); rmStore('export_cols'); rmStore('desktop_mode');
             rmStore('date_sort_select'); rmStore('field_order');
             if (window.location.hash) history.replaceState(null, null, window.location.pathname);
             window.location.href = window.location.pathname;
@@ -1000,6 +1001,20 @@
             else { setStore('custom_freq_title', val); }
         }
         updateBatchDeleteFreqButtonState();
+    }
+
+    function saveCartTitleCustom() {
+        const titleEl = document.getElementById('cartModalTitle');
+        const val = titleEl.innerText.trim();
+        if (canPersist) {
+            if (val === '') {
+                rmStore('custom_cart_title');
+                const siteTitle = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+                titleEl.innerText = `${siteTitle}確認`;
+            } else {
+                setStore('custom_cart_title', val);
+            }
+        }
     }
 
     function updateBatchDeleteFreqButtonState() {
@@ -1247,7 +1262,8 @@
             budget: document.getElementById('budgetInput').value,
             siteTitle: document.getElementById('siteTitle').innerText,
             siteSubtitle: document.getElementById('siteSubtitle').innerText,
-            freqBarTitle: document.getElementById('freqBarTitleText').innerText
+            freqBarTitle: document.getElementById('freqBarTitleText').innerText,
+            cartTitle: document.getElementById('cartModalTitle').innerText
         };
         const jsonStr = JSON.stringify(dataToShare);
         const encoded = btoa(encodeURIComponent(jsonStr));
@@ -1270,8 +1286,13 @@
     }
 
     function updateCartModalTitle() {
-        const titleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
-        document.getElementById('cartModalTitle').innerText = `${titleText}確認`;
+        const customCartTitle = getStore('custom_cart_title');
+        if (customCartTitle) {
+            document.getElementById('cartModalTitle').innerText = customCartTitle;
+        } else {
+            const titleText = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+            document.getElementById('cartModalTitle').innerText = `${titleText}確認`;
+        }
     }
 
     function saveHeaderCustom() {
@@ -1326,7 +1347,8 @@
             budget: document.getElementById('budgetInput').value,
             siteTitle: document.getElementById('siteTitle').innerText,
             siteSubtitle: document.getElementById('siteSubtitle').innerText,
-            freqBarTitle: document.getElementById('freqBarTitleText').innerText
+            freqBarTitle: document.getElementById('freqBarTitleText').innerText,
+            cartTitle: document.getElementById('cartModalTitle').innerText
         };
         const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -1405,6 +1427,7 @@
         if (data.siteTitle) { document.getElementById('siteTitle').innerText = data.siteTitle; setStore('custom_title', data.siteTitle); }
         if (data.siteSubtitle) { document.getElementById('siteSubtitle').innerText = data.siteSubtitle; setStore('custom_subtitle', data.siteSubtitle); }
         if (data.freqBarTitle) { document.getElementById('freqBarTitleText').innerText = data.freqBarTitle; setStore('custom_freq_title', data.freqBarTitle); }
+        if (data.cartTitle) { document.getElementById('cartModalTitle').innerText = data.cartTitle; setStore('custom_cart_title', data.cartTitle); }
         
         pendingImportData = null;
         triggerUpdate();
@@ -2056,16 +2079,18 @@
 
     function exportToImage() {
         if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法匯出喔！'); return; }
-        const area = prepareExport(document.getElementById('siteTitle').innerText.trim() || '待購清單');
+        const title = document.getElementById('cartModalTitle').innerText.trim();
+        const area = prepareExport(title);
         html2canvas(area, { scale: 3, useCORS: true }).then(canvas => {
-            const link = document.createElement('a'); link.download = `${document.getElementById('siteTitle').innerText.trim() || '待購清單'}.jpg`;
+            const link = document.createElement('a'); link.download = `${title}.jpg`;
             link.href = canvas.toDataURL('image/jpeg', 0.95); link.click(); finalizeExport(area);
         });
     }
 
     function shareToClipboard() {
         if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法複製喔！'); return; }
-        const area = prepareExport(document.getElementById('siteTitle').innerText.trim() || '待購清單');
+        const title = document.getElementById('cartModalTitle').innerText.trim();
+        const area = prepareExport(title);
         html2canvas(area, { scale: 3, useCORS: true }).then(canvas => {
             canvas.toBlob(blob => {
                 if (navigator.clipboard && window.ClipboardItem) {
@@ -2078,7 +2103,7 @@
 
     function shareToNative() {
         if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法分享喔！'); return; }
-        const title = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+        const title = document.getElementById('cartModalTitle').innerText.trim();
         const area = prepareExport(title);
         html2canvas(area, { scale: 3, useCORS: true }).then(canvas => {
             canvas.toBlob(blob => {
@@ -2093,7 +2118,7 @@
 
     function exportToPDF() {
         if (Object.keys(cart).length === 0) { alert('清單內沒有商品無法匯出喔！'); return; }
-        const title = document.getElementById('siteTitle').innerText.trim() || '待購清單';
+        const title = document.getElementById('cartModalTitle').innerText.trim();
         const area = prepareExport(title);
         const opt = { margin: 10, filename: `${title}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 3, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
         html2pdf().from(area).set(opt).save().then(() => { finalizeExport(area); });
